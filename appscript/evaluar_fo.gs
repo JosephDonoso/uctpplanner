@@ -769,7 +769,7 @@ function evaluarFuncionObjetivo() {
 
   // 2. Procesamiento de Mallas (Asignaturas y Paralelos)
   for (let i = 1; i < datosMallas.length; i++) {
-    const curso = datosMallas[i][0];
+    const curso = _normalizarMateriaACurso_(datosMallas[i][0]);
     let asignaturaRegistrada = false;
     let numParalelo = 1;
 

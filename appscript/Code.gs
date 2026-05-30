@@ -708,6 +708,19 @@ function writePeriodScheduleFromJsonFiles(files) {
 
     const asignaturas = safeArray_(data?.eventos?.asignaturas);
 
+    // Mapa paralelo -> numero de estudiantes inscritos (para columna "Estudiantes")
+    const alumnosPorParalelo = {};
+    const estudiantesList = safeArray_(data?.recursos?.estudiantes);
+    for (const est of estudiantesList) {
+      for (const ins of safeArray_(est?.asignaturas)) {
+        const cod = String(ins?.codigo || '').trim();
+        const par = String(ins?.paralelo || '').trim();
+        if (!cod || !par) continue;
+        const key = `${cod}-${par}`;
+        alumnosPorParalelo[key] = (alumnosPorParalelo[key] || 0) + 1;
+      }
+    }
+
     for (const subj of asignaturas) {
       const codAsig = String(subj?.codigo || '').trim();
       for (const par of safeArray_(subj?.paralelos)) {
@@ -735,10 +748,12 @@ function writePeriodScheduleFromJsonFiles(files) {
             maestros = maestrosParalelo;
           }
 
+          const cursoId = `${codAsig}-${codPar}`;
           const item = {
-            curso: `${codAsig}-${codPar}`,
+            curso: cursoId,
             actividad: tipo,
-            profesores: maestros.join(', ')
+            profesores: maestros.join(', '),
+            estudiantes: alumnosPorParalelo[cursoId] || 0
           };
 
           pushToPeriod(dia, bloque, item);
@@ -770,7 +785,7 @@ function writePeriodScheduleFromJsonFiles(files) {
         for (let i = 0; i < maxConcurrent; i++) {
           const it = items[i];
           if (it) {
-            row.push(it.curso || '', it.actividad || '', it.profesores || '', '', '');
+            row.push(it.curso || '', it.actividad || '', it.profesores || '', '', it.estudiantes != null ? it.estudiantes : '');
           } else {
             row.push('', '', '', '', '');
           }
