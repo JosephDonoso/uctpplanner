@@ -1,0 +1,71 @@
+{
+  "seed": 42,
+  "output": "data/input/test.json",
+  "metadatos": {
+    "institucion": "PUCV - Escuela de Ingeniería en Informática",
+    "semestre": "2025-1"
+  },
+  "restricciones": {
+    "MAX_CARGA_DIARIA": 8,
+    "MAX_CARGA_BLOQUE": 15,
+    "prob_restriccion_teorica_dias_distintos": 0.6,
+    "prob_restriccion_teorica_separadas_1_dia": 0.05,
+    "bloques_protegidos": [
+      {
+        "dia": "Ju",
+        "bloque": "7-8"
+      }
+    ]
+  },
+  "tiempos": {
+    "dias": ["Lu", "Ma", "Mi", "Ju", "Vi"],
+    "bloques_diarios": 7,
+    "bloques_totales": 35
+  },
+  "cantidades": {
+    "asignaturas": 70,
+    "paralelos_max": 4,
+    "paralelos_min": 1,
+    "media_paralelos_por_asignatura": 1.48,
+    "prob_asignatura_con_ayudantia": 0.35,
+    "sesiones_max": 3,
+    "sesiones_min": 2,
+    "media_sesiones_por_asignatura": 2.3,
+    "maestros": 50,
+    "paralelos_max_por_maestro": 4,
+    "paralelos_min_por_maestro": 1,
+    "media_paralelos_por_maestro": 2.3,
+    "prob_disponibilidad_maestro_bloque": 0.7,
+    "estudiantes": 1200,
+    "sesiones_max_por_estudiante": 7,
+    "sesiones_min_por_estudiante": 0,
+    "media_sesiones_por_estudiante": 3.2,
+    "cursos": 15,
+    "prob_relacion_asignatura_curso": 0.88,
+    "prob_asignaturas_preasignadas": 0.01,
+    "prob_un_maestro_por_paralelo_compartido": 0.7
+  },
+  "nombres": {
+    "prefijo_asignatura": "ASG",
+    "prefijo_maestro": "DOC",
+    "prefijo_estudiante": "EST"
+  },
+  "tipos_clases": [
+    {
+      "tipo": "Cát",
+      "peso": 0.45
+    },
+    {
+      "tipo": "Ay.",
+      "peso": 0.25
+    },
+    {
+      "tipo": "Lab",
+      "peso": 0.2
+    },
+    {
+      "tipo": "Tal",
+      "peso": 0.1
+    }
+  ]
+}

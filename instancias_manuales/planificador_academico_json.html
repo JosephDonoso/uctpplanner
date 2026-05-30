@@ -1,0 +1,2119 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Planificador Académico JSON</title>
+  <style>
+    :root {
+      --bg: #eef2ef;
+      --panel: #ffffff;
+      --panel-2: #f8fbfa;
+      --ink: #203036;
+      --muted: #5c6a70;
+      --line: #d4ddd9;
+      --brand: #0c8a75;
+      --accent: #e57a2d;
+      --danger: #b3261e;
+      --shadow: 0 14px 36px rgba(16, 34, 30, 0.08);
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 420px at 0% 0%, #d8ece7 0%, transparent 66%),
+        radial-gradient(1000px 340px at 100% 0%, #f9dcc7 0%, transparent 64%),
+        linear-gradient(160deg, #f8f5ef 0%, var(--bg) 100%);
+    }
+
+    .wrap {
+      width: min(1320px, 94vw);
+      margin: 24px auto 40px;
+      display: grid;
+      gap: 16px;
+      animation: rise 220ms ease-out;
+    }
+
+    .hero,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: calc(var(--radius) + 4px);
+      box-shadow: var(--shadow);
+    }
+
+    .hero {
+      padding: 18px 20px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,251,250,0.98));
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr 0.95fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .stack {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      padding: 14px;
+    }
+
+    h2 {
+      margin: 0 0 12px;
+      font-size: 18px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    label {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: #334349;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      font: inherit;
+      color: var(--ink);
+      background: #fbfdfc;
+      border: 1px solid #c7d4d0;
+      border-radius: 10px;
+      padding: 9px 10px;
+    }
+
+    textarea { min-height: 68px; resize: vertical; }
+    input:focus, textarea:focus, select:focus {
+      outline: 2px solid color-mix(in srgb, var(--brand) 30%, white 70%);
+      border-color: var(--brand);
+    }
+
+    .muted { color: var(--muted); font-size: 12px; }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    button {
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 8px 13px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .btn-brand { background: var(--brand); color: #fff; }
+    .btn-accent { background: var(--accent); color: #fff; }
+    .btn-soft { background: #eef5f3; color: #254146; border-color: #c9dad5; }
+    .btn-danger { background: #fff3f2; color: var(--danger); border-color: #f0c7c2; }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 14px;
+    }
+
+    .pill {
+      font-size: 12px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      border: 1px solid #cfe1db;
+      background: #edf6f3;
+      color: #2b4b4f;
+    }
+
+    .block {
+      border: 1px solid #d0dbd7;
+      border-radius: 12px;
+      background: var(--panel-2);
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    .block-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .block-title {
+      font-weight: 800;
+      color: #234147;
+      font-size: 14px;
+    }
+
+    .class-card {
+      border: 1px dashed #c8d5d1;
+      border-radius: 10px;
+      background: #f5fbf9;
+      padding: 10px;
+      margin-top: 8px;
+    }
+
+    .status {
+      display: none;
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 13px;
+    }
+
+    .status.ok {
+      display: block;
+      background: #eaf8f2;
+      border: 1px solid #bbdfcb;
+      color: #1e5b39;
+    }
+
+    .status.err {
+      display: block;
+      background: #fff2f1;
+      border: 1px solid #f0b9b3;
+      color: #8c2822;
+    }
+
+    details {
+      border: 1px solid color-mix(in srgb, CanvasText 14%, transparent);
+      border-radius: 12px;
+      background: color-mix(in srgb, Canvas 92%, CanvasText 8%);
+      margin-bottom: 8px;
+      overflow: clip;
+    }
+
+    summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 10px 12px;
+    }
+
+    summary::-webkit-details-marker { display: none; }
+
+    .sumline {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .summain { font-weight: 800; font-size: 13px; line-height: 1.25; }
+    .summinor { margin-top: 4px; font-size: 12px; opacity: 0.82; line-height: 1.35; }
+    .badge { font-size: 12px; opacity: 0.9; white-space: nowrap; }
+
+    .content {
+      border-top: 1px solid color-mix(in srgb, CanvasText 12%, transparent);
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .resource {
+      border: 1px solid #d0dbd7;
+      border-radius: 12px;
+      background: var(--panel-2);
+      padding: 10px;
+      margin-top: 8px;
+    }
+
+    .resource-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .resource-title { font-weight: 800; color: #234147; }
+    .resource-tag {
+      font-size: 12px;
+      border: 1px solid #cfe1db;
+      background: #edf6f3;
+      color: #2b4b4f;
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+
+    .teacher-list {
+      margin-top: 10px;
+      max-height: 380px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .abanico-list {
+      max-height: 560px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .teacher-item {
+      margin-top: 8px;
+    }
+
+    .teacher-item summary {
+      padding: 8px 10px;
+    }
+
+    .teacher-line {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .teacher-name-line {
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      font-size: 13px;
+    }
+
+    .teacher-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .teacher-content {
+      border-top: 1px solid #d0dbd7;
+      padding: 10px;
+      background: #f7fbfa;
+    }
+
+    .empty {
+      border: 1px dashed #bfcfc9;
+      border-radius: 10px;
+      padding: 12px;
+      background: #fbfdfc;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .preview-json {
+      margin: 0;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #d0dbd7;
+      background: #f9fbfb;
+      max-height: 360px;
+      overflow: auto;
+      font: 12px/1.5 Consolas, "Courier New", monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .availability {
+      display: grid;
+      gap: 8px;
+    }
+
+    .availability-table {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      grid-template-rows: auto auto;
+      gap: 6px 10px;
+      align-items: start;
+    }
+
+    .availability-corner {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .availability-days {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 5), 1fr);
+      gap: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      text-align: center;
+      align-items: center;
+      user-select: none;
+    }
+
+    .availability-days {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .availability-blocks {
+      grid-column: 1;
+      grid-row: 2;
+      display: grid;
+      grid-auto-rows: 18px;
+      gap: 4px;
+      align-items: center;
+      justify-items: end;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--muted);
+      user-select: none;
+      padding-right: 2px;
+    }
+
+    .availability-grid {
+      display: grid;
+      grid-template-columns: repeat(var(--cols, 5), 1fr);
+      grid-auto-rows: 18px;
+      gap: 4px;
+      align-items: center;
+      justify-items: center;
+    }
+
+    .availability-grid {
+      grid-column: 2;
+      grid-row: 2;
+    }
+
+    .avail-cell {
+      width: 18px;
+      height: 18px;
+      padding: 0;
+      border-radius: 6px;
+      border: 1px solid #c7d4d0;
+      background: #ffffff;
+      cursor: pointer;
+    }
+
+    .avail-cell.on {
+      background: color-mix(in srgb, #3b82f6 22%, #ffffff 78%);
+      border-color: color-mix(in srgb, #3b82f6 55%, #c7d4d0 45%);
+    }
+
+    .avail-cell:focus {
+      outline: 2px solid color-mix(in srgb, #3b82f6 35%, white 65%);
+      outline-offset: 1px;
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 1020px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .row { grid-template-columns: 1fr; }
+      .hero { padding: 14px; }
+      .panel { padding: 12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Planificador Académico JSON</h1>
+      <p class="subtitle">Carga un JSON, edita asignaturas en formato abanico, administra maestros y exporta con el nombre que quieras.</p>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <h2>Editor</h2>
+
+        <div class="field">
+          <label for="jsonFile">Archivo base</label>
+          <input id="jsonFile" type="file" accept="application/json,.json" />
+          <div id="fileState" class="muted">Sin archivo cargado.</div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="outputName">Nombre de salida</label>
+            <input id="outputName" placeholder="Semestre editado.json" />
+          </div>
+          <div class="field">
+            <label for="semester">Semestre</label>
+            <input id="semester" placeholder="2025-1" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="description">Descripcion</label>
+          <textarea id="description" placeholder="Opcional. Si queda vacia, se omite del JSON."></textarea>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="maxCargaDiaria">MAX_CARGA_DIARIA</label>
+            <input id="maxCargaDiaria" type="number" min="0" step="1" />
+            <div class="muted">Máximo de horas PUCV de clases por día (profesor).</div>
+          </div>
+          <div class="field">
+            <label for="maxCargaBloque">MAX_CARGA_BLOQUE</label>
+            <input id="maxCargaBloque" type="number" min="0" step="1" />
+            <div class="muted">Máximo de clases por bloque.</div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Restricciones nuevas</label>
+          <div class="muted">Cada paralelo de una asignatura puede marcar cómo deben ordenarse sus clases teóricas. Cada profesor puede activar o desactivar el respeto a su carga diaria y semanal.</div>
+        </div>
+
+        <div class="field">
+          <label>Institucion</label>
+          <input id="institution" readonly />
+        </div>
+
+        <div class="pills">
+          <span id="countSubjects" class="pill">Asignaturas: 0</span>
+          <span id="countParallels" class="pill">Paralelos: 0</span>
+          <span id="countClasses" class="pill">Clases: 0</span>
+          <span id="countTeachers" class="pill">Maestros: 0</span>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="subjectCode">Codigo</label>
+            <input id="subjectCode" placeholder="ICD9999" />
+          </div>
+          <div class="field">
+            <label for="subjectName">Nombre</label>
+            <input id="subjectName" placeholder="NOMBRE DE LA ASIGNATURA" />
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label for="career">Carrera</label>
+            <input id="career" placeholder="ICD" />
+          </div>
+          <div class="field">
+            <label for="courseSemester">Semestre de carrera</label>
+            <input id="courseSemester" placeholder="01" />
+          </div>
+        </div>
+
+        <label class="muted" style="display:flex; gap:8px; align-items:center; margin:4px 0 8px;">
+          <input id="subjectHasCourse" type="checkbox" checked />
+          Esta asignatura pertenece a una carrera/semestre
+        </label>
+
+        <div class="actions">
+          <button id="newSubject" class="btn-soft" type="button">Nueva asignatura</button>
+          <button id="templateSubject" class="btn-soft" type="button">Plantilla abanico</button>
+          <button id="addParallel" class="btn-soft" type="button">Agregar paralelo</button>
+        </div>
+
+        <div id="parallelList"></div>
+
+        <div class="actions">
+          <button id="saveSubject" class="btn-brand" type="button">Guardar asignatura</button>
+          <button id="downloadJson" class="btn-accent" type="button">Descargar JSON</button>
+        </div>
+
+        <div id="status" class="status"></div>
+      </section>
+
+      <div class="stack">
+        <section class="panel">
+          <h2>Recursos de maestros</h2>
+          <div class="actions" style="margin-top:0;">
+            <button id="syncTeachers" class="btn-soft" type="button">Sincronizar desde planilla</button>
+            <button id="addTeacher" class="btn-soft" type="button">Agregar maestro</button>
+          </div>
+          <div class="muted">Se agregan automaticamente los maestros mencionados en asignaturas, paralelos o clases. La disponibilidad se edita con la matriz (clic en los cuadros) y cada profesor puede marcar su carga diaria/semanal máxima.</div>
+          <div id="teacherList" class="teacher-list"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Planilla en abanico</h2>
+          <div class="actions" style="margin-top:0; margin-bottom:10px;">
+            <button id="openAll" class="btn-soft" type="button">Abrir todo</button>
+            <button id="closeAll" class="btn-soft" type="button">Cerrar todo</button>
+          </div>
+          <div id="abanicoList" class="abanico-list"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Vista previa JSON</h2>
+          <pre id="preview" class="preview-json">{}</pre>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const FIXED_INSTITUTION = 'PUCV - Escuela de Ingeniería en Informática';
+    const DEFAULT_TYPES = ['Cát', 'Ay.', 'Lab', 'Tal'];
+
+    const els = {
+      jsonFile: document.getElementById('jsonFile'),
+      outputName: document.getElementById('outputName'),
+      semester: document.getElementById('semester'),
+      description: document.getElementById('description'),
+      maxCargaDiaria: document.getElementById('maxCargaDiaria'),
+      maxCargaBloque: document.getElementById('maxCargaBloque'),
+      institution: document.getElementById('institution'),
+      fileState: document.getElementById('fileState'),
+      countSubjects: document.getElementById('countSubjects'),
+      countParallels: document.getElementById('countParallels'),
+      countClasses: document.getElementById('countClasses'),
+      countTeachers: document.getElementById('countTeachers'),
+      subjectCode: document.getElementById('subjectCode'),
+      subjectName: document.getElementById('subjectName'),
+      career: document.getElementById('career'),
+      courseSemester: document.getElementById('courseSemester'),
+      subjectHasCourse: document.getElementById('subjectHasCourse'),
+      newSubject: document.getElementById('newSubject'),
+      templateSubject: document.getElementById('templateSubject'),
+      addParallel: document.getElementById('addParallel'),
+      parallelList: document.getElementById('parallelList'),
+      saveSubject: document.getElementById('saveSubject'),
+      downloadJson: document.getElementById('downloadJson'),
+      syncTeachers: document.getElementById('syncTeachers'),
+      addTeacher: document.getElementById('addTeacher'),
+      teacherList: document.getElementById('teacherList'),
+      openAll: document.getElementById('openAll'),
+      closeAll: document.getElementById('closeAll'),
+      abanicoList: document.getElementById('abanicoList'),
+      status: document.getElementById('status'),
+      preview: document.getElementById('preview')
+    };
+
+    els.institution.value = FIXED_INSTITUTION;
+    els.maxCargaDiaria.value = 8;
+    els.maxCargaBloque.value = 15;
+
+    const state = {
+      data: null,
+      sourceFileName: 'Semestre.json',
+      classTypes: [...DEFAULT_TYPES],
+      teacherSeq: 0,
+      parallelSeq: 0,
+      editSubjectIndex: null,
+      teachers: []
+    };
+
+    function readIntOr(value, fallback) {
+      const raw = String(value ?? '').trim();
+      if (!raw) return fallback;
+      const n = Number(raw);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.trunc(n);
+    }
+
+    function safeArray(value) {
+      return Array.isArray(value) ? value : [];
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function showStatus(message, ok) {
+      els.status.textContent = message;
+      els.status.className = 'status ' + (ok ? 'ok' : 'err');
+    }
+
+    function clearStatus() {
+      els.status.className = 'status';
+      els.status.textContent = '';
+    }
+
+    function syncCourseUI() {
+      const hasCourse = Boolean(els.subjectHasCourse.checked);
+      els.career.disabled = !hasCourse;
+      els.courseSemester.disabled = !hasCourse;
+      els.career.placeholder = hasCourse ? 'ICD' : 'No aplica';
+      els.courseSemester.placeholder = hasCourse ? '01' : 'No aplica';
+      if (!hasCourse) {
+        els.career.value = '';
+        els.courseSemester.value = '';
+      }
+    }
+
+    function linesToArray(text) {
+      return String(text || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean);
+    }
+
+    function arrayToLines(items) {
+      return safeArray(items).map((item) => String(item)).join('\n');
+    }
+
+    function splitComma(text) {
+      return String(text || '')
+        .split(',')
+        .map((part) => part.trim())
+        .filter(Boolean);
+    }
+
+    function normalizeTeacherName(value) {
+      return String(value || '').trim().replace(/\s+/g, ' ');
+    }
+
+    function normalizeTheoryRestriction(value) {
+      const raw = String(value || '').trim().toLowerCase();
+      if (!raw || raw === 'none' || raw === 'sin restriccion' || raw === 'sin restricción') return 'none';
+      if (['days_distinct', 'dias_distintos', 'días_distintos', 'dias distintos', 'dias-distintos', 'distinct_days'].includes(raw)) return 'days_distinct';
+      if (['days_gap_1', 'separadas_un_dia', 'separadas 1 dia', 'separadas_1_dia', 'separadas-un-dia', 'one_day_gap'].includes(raw)) return 'days_gap_1';
+      return 'none';
+    }
+
+    function theoryRestrictionLabel(value) {
+      switch (normalizeTheoryRestriction(value)) {
+        case 'days_distinct':
+          return 'Días distintos (pueden ser consecutivos)';
+        case 'days_gap_1':
+          return 'Separadas con al menos 1 día';
+        default:
+          return 'Sin restricción';
+      }
+    }
+
+    function theoryRestrictionListKey(value) {
+      switch (normalizeTheoryRestriction(value)) {
+        case 'days_distinct':
+          return 'CLASES_TEORICAS_DIAS_DISTINTOS';
+        case 'days_gap_1':
+          return 'CLASES_TEORICAS_SEPARADAS_1_DIA';
+        default:
+          return null;
+      }
+    }
+
+    function defaultTeacherRestrictionFlags() {
+      return {
+        respeta_max_carga_diaria: true,
+        max_carga_diaria: 4,
+        respeta_max_carga_semanal: true,
+        max_carga_semanal: 'default'
+      };
+    }
+
+    function normalizeTeacherRestrictionFlags(raw) {
+      const base = defaultTeacherRestrictionFlags();
+      const source = raw && typeof raw === 'object' ? raw : {};
+      return {
+        respeta_max_carga_diaria: Boolean(source.respeta_max_carga_diaria ?? source.respetar_max_carga_diaria ?? source.respetarCargaDiaria ?? base.respeta_max_carga_diaria),
+        max_carga_diaria: readIntOr(source.max_carga_diaria ?? source.max_diaria ?? source.carga_diaria_max, base.max_carga_diaria),
+        respeta_max_carga_semanal: Boolean(source.respeta_max_carga_semanal ?? source.respetar_max_carga_semanal ?? source.respetarCargaSemanal ?? base.respeta_max_carga_semanal),
+        max_carga_semanal: readIntOr(source.max_carga_semanal ?? source.max_semanal ?? source.carga_semanal_max, base.max_carga_semanal)
+      };
+    }
+
+    function getTimeDays() {
+      ensureBaseData();
+      const days = safeArray(state.data?.tiempos?.dias).filter(Boolean);
+      return days.length ? days : ['Lu', 'Ma', 'Mi', 'Ju', 'Vi'];
+    }
+
+    function getTimeBlocks() {
+      ensureBaseData();
+      const blocks = safeArray(state.data?.tiempos?.bloques).filter(Boolean);
+      return blocks.length ? blocks : ['1-2', '3-4', '5-6', '7-8', '9-10', '11-12', '13-14'];
+    }
+
+    function defaultTeacherAvailability() {
+      const days = getTimeDays();
+      const blocks = getTimeBlocks();
+      const matrix = days.map((day) => ({
+        [day]: blocks.map(() => 1)
+      }));
+
+      const juIndex = days.indexOf('Ju');
+      const bIndex = blocks.indexOf('7-8');
+      if (juIndex >= 0 && bIndex >= 0) {
+        matrix[juIndex][days[juIndex]][bIndex] = 0;
+      }
+      return matrix;
+    }
+
+    function isAvailabilityMatrix(value) {
+      if (!Array.isArray(value) || value.length === 0) return false;
+      const days = new Set(getTimeDays());
+      for (const entry of value) {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false;
+        const keys = Object.keys(entry);
+        if (keys.length !== 1) return false;
+        const day = keys[0];
+        if (!days.has(day)) return false;
+        if (!Array.isArray(entry[day])) return false;
+      }
+      return true;
+    }
+
+    function availabilityQuality(raw) {
+      if (isAvailabilityMatrix(raw)) return 2;
+      if (Array.isArray(raw) && raw.some((x) => typeof x === 'string' && x.trim())) return 1;
+      return 0;
+    }
+
+    function normalizeAvailability(raw) {
+      const days = getTimeDays();
+      const blocks = getTimeBlocks();
+
+      if (isAvailabilityMatrix(raw)) {
+        const dayMap = new Map();
+        for (const entry of raw) {
+          const [day] = Object.keys(entry);
+          const arr = safeArray(entry?.[day]);
+          const normalized = blocks.map((_, i) => (Number(arr[i]) === 1 ? 1 : 0));
+          dayMap.set(day, normalized);
+        }
+        return days.map((day) => ({
+          [day]: dayMap.get(day) || blocks.map(() => 1)
+        }));
+      }
+
+      if (Array.isArray(raw) && raw.every((x) => typeof x === 'string')) {
+        const parsed = days.map((day) => ({
+          [day]: blocks.map(() => 0)
+        }));
+        const byDay = new Map(parsed.map((entry) => {
+          const [d] = Object.keys(entry);
+          return [d, entry[d]];
+        }));
+
+        let any = false;
+        for (const line of raw.map((x) => x.trim()).filter(Boolean)) {
+          const match = line.match(/^(Lu|Ma|Mi|Ju|Vi)\s+(\d+\s*-\s*\d+)$/i);
+          if (!match) continue;
+          const day = match[1].slice(0, 1).toUpperCase() + match[1].slice(1, 2).toLowerCase();
+          const block = match[2].replace(/\s+/g, '');
+          const bIndex = blocks.indexOf(block);
+          const arr = byDay.get(day);
+          if (!arr || bIndex < 0) continue;
+          arr[bIndex] = 1;
+          any = true;
+        }
+        return any ? parsed : defaultTeacherAvailability();
+      }
+
+      return defaultTeacherAvailability();
+    }
+
+    function uniqueTeachers(list) {
+      const map = new Map();
+      for (const item of list) {
+        const nombre = normalizeTeacherName(item?.nombre ?? item?.name ?? item);
+        const id = item?.id || `t-${++state.teacherSeq}`;
+        const key = nombre ? nombre.toLowerCase() : `__unnamed__:${id}`;
+        const prev = map.get(key);
+        const calidad = availabilityQuality(item?.disponibilidad);
+        const disponibilidad = normalizeAvailability(item?.disponibilidad);
+        const restricciones = normalizeTeacherRestrictionFlags(item?.restricciones || item);
+
+        if (!prev) {
+          map.set(key, {
+            id,
+            nombre,
+            disponibilidad,
+            restricciones,
+            _dispQuality: calidad,
+            origen: item?.origen || 'manual'
+          });
+        } else {
+          if ((prev._dispQuality ?? 0) < calidad) {
+            prev.disponibilidad = disponibilidad;
+            prev._dispQuality = calidad;
+          }
+          if (!prev.restricciones || typeof prev.restricciones !== 'object') {
+            prev.restricciones = restricciones;
+          } else {
+            prev.restricciones = {
+              respeta_max_carga_diaria: Boolean(prev.restricciones.respeta_max_carga_diaria ?? restricciones.respeta_max_carga_diaria),
+              max_carga_diaria: readIntOr(prev.restricciones.max_carga_diaria, restricciones.max_carga_diaria),
+              respeta_max_carga_semanal: Boolean(prev.restricciones.respeta_max_carga_semanal ?? restricciones.respeta_max_carga_semanal),
+              max_carga_semanal: readIntOr(prev.restricciones.max_carga_semanal, restricciones.max_carga_semanal)
+            };
+          }
+          if (item?.origen === 'archivo') prev.origen = 'archivo';
+          else if (item?.origen === 'detectado' && prev.origen !== 'archivo') prev.origen = 'detectado';
+        }
+      }
+      return [...map.values()].map((t) => {
+        const { _dispQuality, ...rest } = t;
+        return rest;
+      });
+    }
+
+    function detectClassTypes(data) {
+      const types = new Set(safeArray(data?.eventos?.tipo_clases).filter(Boolean));
+      for (const subject of safeArray(data?.eventos?.asignaturas)) {
+        for (const parallel of safeArray(subject?.paralelos)) {
+          for (const cls of safeArray(parallel?.clases)) {
+            if (typeof cls?.tipo === 'string' && cls.tipo.trim()) types.add(cls.tipo.trim());
+          }
+        }
+      }
+      return [...types].length ? [...types] : [...DEFAULT_TYPES];
+    }
+
+    function ensureBaseData() {
+      if (state.data) return;
+      state.data = {
+        metadatos: {
+          institucion: FIXED_INSTITUTION,
+          semestre: ''
+        },
+        restricciones: {
+          MAX_CARGA_DIARIA: 8,
+          MAX_CARGA_BLOQUE: 15,
+          CLASES_TEORICAS_DIAS_DISTINTOS: [],
+          CLASES_TEORICAS_SEPARADAS_1_DIA: [],
+          PROFESORES: []
+        },
+        tiempos: {
+          dias: ['Lu', 'Ma', 'Mi', 'Ju', 'Vi'],
+          bloques: ['1-2', '3-4', '5-6', '7-8', '9-10', '11-12', '13-14']
+        },
+        eventos: {
+          tipo_clases: [...DEFAULT_TYPES],
+          asignaturas: []
+        },
+        recursos: {
+          maestros: [],
+          estudiantes: []
+        }
+      };
+    }
+
+    function getSubjects() {
+      ensureBaseData();
+      return safeArray(state.data?.eventos?.asignaturas);
+    }
+
+    function getParallelTeachers(parallel) {
+      return safeArray(parallel?.maestros);
+    }
+
+    function teacherDisplayForClass(cls, parallel) {
+      const owns = Object.prototype.hasOwnProperty.call(cls || {}, 'maestros');
+      if (!owns) {
+        const teachers = getParallelTeachers(parallel);
+        return teachers.length ? teachers.join(', ') : 'No hay maestro';
+      }
+      if (cls?.maestros === null) return 'No hay maestro';
+      const teachers = safeArray(cls?.maestros);
+      return teachers.length ? teachers.join(', ') : 'No hay maestro';
+    }
+
+    function scheduleDisplay(cls) {
+      const schedule = cls?.horario_predefinido;
+      if (!schedule) return 'SIN HORARIO';
+      const day = schedule?.dia || '';
+      const block = schedule?.bloque || '';
+      const text = `${day} ${block}`.trim();
+      return text || 'SIN HORARIO';
+    }
+
+    function normalizeTeacherResourcesFromData() {
+      const teachers = safeArray(state.data?.recursos?.maestros).map((item) => ({
+        nombre: item?.nombre,
+        disponibilidad: normalizeAvailability(item?.disponibilidad),
+        origen: 'archivo'
+      }));
+      state.teachers = uniqueTeachers(teachers);
+      syncTeachersFromPlanilla();
+    }
+
+    function extractTeachersFromPlanilla() {
+      const names = [];
+      for (const subject of getSubjects()) {
+        if (Array.isArray(subject?.maestros)) names.push(...subject.maestros);
+        for (const parallel of safeArray(subject?.paralelos)) {
+          names.push(...safeArray(parallel?.maestros));
+          for (const cls of safeArray(parallel?.clases)) {
+            if (Array.isArray(cls?.maestros)) names.push(...cls.maestros);
+          }
+        }
+      }
+      return Array.from(new Set(names.map(normalizeTeacherName).filter(Boolean)));
+    }
+
+    function restrictionEntryKey(codigoAsignatura, paralelo) {
+      return `${normalizeTeacherName(codigoAsignatura).toUpperCase()}|${normalizeTeacherName(paralelo).toUpperCase()}`;
+    }
+
+    function applyRestrictionMetadataFromData(data) {
+      const restricciones = data?.restricciones && typeof data.restricciones === 'object' ? data.restricciones : {};
+      const distinctSet = new Set(safeArray(restricciones.CLASES_TEORICAS_DIAS_DISTINTOS).map((item) => restrictionEntryKey(item?.codigo_asignatura ?? item?.codigo ?? item?.asignatura, item?.paralelo ?? item?.codigo_paralelo ?? item?.parallel)));
+      const gapSet = new Set(safeArray(restricciones.CLASES_TEORICAS_SEPARADAS_1_DIA).map((item) => restrictionEntryKey(item?.codigo_asignatura ?? item?.codigo ?? item?.asignatura, item?.paralelo ?? item?.codigo_paralelo ?? item?.parallel)));
+
+      for (const subject of safeArray(data?.eventos?.asignaturas)) {
+        const codigoAsignatura = String(subject?.codigo || '').trim();
+        for (const parallel of safeArray(subject?.paralelos)) {
+          const key = restrictionEntryKey(codigoAsignatura, parallel?.codigo);
+          if (distinctSet.has(key)) parallel.restriccion_teoricas = 'days_distinct';
+          else if (gapSet.has(key)) parallel.restriccion_teoricas = 'days_gap_1';
+          else if (Object.prototype.hasOwnProperty.call(parallel || {}, 'restriccion_teoricas')) {
+            parallel.restriccion_teoricas = normalizeTheoryRestriction(parallel.restriccion_teoricas);
+          }
+        }
+      }
+    }
+
+    function upgradeImportedDataCompatibility(data) {
+      if (!data || typeof data !== 'object') return;
+
+      if (!data.restricciones || typeof data.restricciones !== 'object') {
+        data.restricciones = {};
+      }
+
+      if (!Array.isArray(data.restricciones.CLASES_TEORICAS_DIAS_DISTINTOS)) {
+        data.restricciones.CLASES_TEORICAS_DIAS_DISTINTOS = [];
+      }
+      if (!Array.isArray(data.restricciones.CLASES_TEORICAS_SEPARADAS_1_DIA)) {
+        data.restricciones.CLASES_TEORICAS_SEPARADAS_1_DIA = [];
+      }
+      if (!Array.isArray(data.restricciones.PROFESORES)) {
+        data.restricciones.PROFESORES = [];
+      }
+
+      for (const subject of safeArray(data?.eventos?.asignaturas)) {
+        for (const parallel of safeArray(subject?.paralelos)) {
+          parallel.restriccion_teoricas = normalizeTheoryRestriction(parallel?.restriccion_teoricas || parallel?.restriccion_clases_teoricas);
+        }
+      }
+    }
+
+    function syncTeachersFromPlanilla() {
+      const detected = extractTeachersFromPlanilla().map((nombre) => ({
+        nombre,
+        disponibilidad: defaultTeacherAvailability(),
+        origen: 'detectado'
+      }));
+      state.teachers = uniqueTeachers([
+        ...state.teachers,
+        ...detected
+      ]);
+      renderTeachers();
+      updateCounters();
+    }
+
+    function renderTeacherForm() {
+      if (!state.teachers.length) {
+        els.teacherList.innerHTML = '<div class="empty">No hay maestros aun. Usa "Sincronizar desde planilla" o agrega uno manualmente.</div>';
+        updateCounters();
+        return;
+      }
+
+      els.teacherList.innerHTML = state.teachers.map((teacher, index) => {
+        const tag = teacher.origen === 'archivo' ? 'Del archivo' : teacher.origen === 'detectado' ? 'Detectado' : 'Manual';
+        const days = getTimeDays();
+        const blocks = getTimeBlocks();
+        const maxCargaDiariaGlobal = readIntOr(els.maxCargaDiaria.value, 8);
+        const dailyDefaultValue = getDailyTeacherDefaultValue();
+        const disponibilidad = normalizeAvailability(teacher.disponibilidad);
+        const availOn = disponibilidad.reduce((acc, entry) => {
+          const [day] = Object.keys(entry);
+          return acc + safeArray(entry?.[day]).reduce((a, v) => a + (Number(v) === 1 ? 1 : 0), 0);
+        }, 0);
+        const total = days.length * blocks.length;
+        const displayName = teacher.nombre || '(Sin nombre)';
+        const reglas = normalizeTeacherRestrictionFlags(teacher.restricciones);
+        const dailyIsDefault = Boolean(reglas.respeta_max_carga_diaria)
+          && readIntOr(reglas.max_carga_diaria, dailyDefaultValue) === dailyDefaultValue;
+        const weeklyIsDefault = String(reglas.max_carga_semanal) === 'default';
+
+        const dayToArr = new Map(disponibilidad.map((entry) => {
+          const [d] = Object.keys(entry);
+          return [d, safeArray(entry[d])];
+        }));
+
+        return `
+          <details class="resource teacher-item" data-teacher-index="${index}">
+            <summary>
+              <div class="teacher-line">
+                <div>
+                  <div class="teacher-name-line">${escapeHtml(displayName)}</div>
+                  <div class="teacher-hint">Disponibilidad: ${availOn}/${total}</div>
+                </div>
+                <div class="resource-tag">${escapeHtml(tag)}</div>
+              </div>
+            </summary>
+            <div class="teacher-content">
+              <div class="field">
+                <label>Nombre</label>
+                <input class="teacher-name" value="${escapeHtml(teacher.nombre || '')}" placeholder="Nombre del maestro" />
+              </div>
+              <div class="field">
+                <label>Disponibilidad</label>
+                <div class="availability">
+                  <div class="availability-table">
+                    <div class="availability-corner"></div>
+                    <div class="availability-days" style="--cols:${days.length}">
+                      ${days.map((d) => `<span>${escapeHtml(d)}</span>`).join('')}
+                    </div>
+                    <div class="availability-blocks">
+                      ${blocks.map((b) => `<span>${escapeHtml(b)}</span>`).join('')}
+                    </div>
+                    <div class="availability-grid" style="--cols:${days.length}" aria-label="Matriz de disponibilidad">
+                      ${blocks.map((block) => days.map((day) => {
+                        const arr = dayToArr.get(day) || [];
+                        const bIndex = blocks.indexOf(block);
+                        const on = Number(arr?.[bIndex]) === 1;
+                        return `
+                          <button
+                            type="button"
+                            class="avail-cell js-avail-cell ${on ? 'on' : ''}"
+                            data-day="${escapeHtml(day)}"
+                            data-block="${escapeHtml(block)}"
+                            aria-pressed="${on ? 'true' : 'false'}"
+                            title="${escapeHtml(day)} ${escapeHtml(block)}"
+                          ></button>
+                        `;
+                      }).join('')).join('')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="field">
+                <label>Restricciones del profesor</label>
+                <div class="row">
+                  <label class="muted" style="display:flex; gap:8px; align-items:center; margin:4px 0 0;">
+                    <input class="teacher-rule-daily-enabled" type="checkbox" ${reglas.respeta_max_carga_diaria ? 'checked' : ''} />
+                    Respetar carga máxima diaria
+                  </label>
+                  <label class="muted" style="display:flex; gap:8px; align-items:center; margin:4px 0 0;">
+                    <input class="teacher-rule-weekly-enabled" type="checkbox" ${weeklyIsDefault ? 'checked' : ''} />
+                    Respetar carga máxima semanal
+                  </label>
+                </div>
+                <div class="row">
+                  <div class="field">
+                    <label>Máx. clases por día</label>
+                    <div class="teacher-daily-default-text muted" style="margin:4px 0 0; display:${dailyIsDefault ? 'block' : 'none'};">Default (MAX_CARGA_DIARIA/2 = ${escapeHtml(dailyDefaultValue)})</div>
+                    <input class="teacher-rule-daily-value" type="number" min="0" step="1" value="${escapeHtml(dailyIsDefault ? dailyDefaultValue : reglas.max_carga_diaria)}" style="display:${dailyIsDefault ? 'none' : 'block'};" />
+                  </div>
+                  <div class="field">
+                    <label>Máx. días por semana</label>
+                    <div class="teacher-weekly-default-text muted" style="margin:4px 0 0; display:${weeklyIsDefault ? 'block' : 'none'};">Default (3 días si horas PUCV <= 12 sino 4 días)</div>
+                    <input class="teacher-rule-weekly-value" type="number" min="0" step="1" value="${escapeHtml(weeklyIsDefault ? 3 : reglas.max_carga_semanal)}" style="display:${weeklyIsDefault ? 'none' : 'block'};" />
+                  </div>
+                </div>
+              </div>
+              <div class="actions">
+                <button type="button" class="btn-brand js-save-teacher">Guardar maestro</button>
+                <button type="button" class="btn-danger js-remove-teacher">Quitar maestro</button>
+              </div>
+            </div>
+          </details>
+        `;
+      }).join('');
+      updateCounters();
+    }
+
+    function readTeachersFromDOM() {
+      const cards = Array.from(els.teacherList.querySelectorAll('.resource'));
+      const teachers = [];
+      for (const card of cards) {
+        const index = Number(card.dataset.teacherIndex);
+        const current = state.teachers[index] || {};
+
+        const days = getTimeDays();
+        const blocks = getTimeBlocks();
+        const byDay = new Map(days.map((d) => [d, blocks.map(() => 0)]));
+        card.querySelectorAll('.js-avail-cell').forEach((btn) => {
+          if (!(btn instanceof HTMLElement)) return;
+          const day = btn.dataset.day;
+          const block = btn.dataset.block;
+          if (!day || !block) return;
+          const arr = byDay.get(day);
+          const bIndex = blocks.indexOf(block);
+          if (!arr || bIndex < 0) return;
+          arr[bIndex] = btn.classList.contains('on') ? 1 : 0;
+        });
+        const disponibilidad = days.map((d) => ({ [d]: byDay.get(d) || blocks.map(() => 0) }));
+
+        teachers.push({
+          id: current.id || `t-${++state.teacherSeq}`,
+          nombre: normalizeTeacherName(card.querySelector('.teacher-name')?.value),
+          disponibilidad,
+          restricciones: {
+            respeta_max_carga_diaria: Boolean(card.querySelector('.teacher-rule-daily-enabled')?.checked),
+            max_carga_diaria: readIntOr(card.querySelector('.teacher-rule-daily-value')?.value, defaultTeacherRestrictionFlags().max_carga_diaria),
+            respeta_max_carga_semanal: Boolean(card.querySelector('.teacher-rule-weekly-enabled')?.checked),
+            max_carga_semanal: Boolean(card.querySelector('.teacher-rule-weekly-enabled')?.checked)
+              ? 'default'
+              : readIntOr(card.querySelector('.teacher-rule-weekly-value')?.value, 3)
+          },
+          origen: current.origen || 'manual'
+        });
+      }
+      state.teachers = uniqueTeachers(teachers);
+      updateCounters();
+    }
+
+    function renderClassOptions(selected) {
+      const set = new Set(state.classTypes);
+      if (selected) set.add(selected);
+      return [...set].map((type) => {
+        const sel = type === selected ? 'selected' : '';
+        return `<option value="${escapeHtml(type)}" ${sel}>${escapeHtml(type)}</option>`;
+      }).join('');
+    }
+
+    function inferClassMode(value) {
+      if (value === null) return 'null';
+      if (Array.isArray(value)) return 'list';
+      return 'omit';
+    }
+
+    function addParallelCard(prefill = {}) {
+      const card = document.createElement('div');
+      card.className = 'block parallel-card';
+      card.dataset.parallelId = String(++state.parallelSeq);
+
+      const classes = safeArray(prefill.clases);
+      const theoryRestriction = normalizeTheoryRestriction(prefill.restriccion_teoricas || prefill.restriccion_clases_teoricas);
+      card.dataset.theoryRestriction = theoryRestriction;
+      card.innerHTML = `
+        <div class="block-head">
+          <div class="block-title">Paralelo</div>
+          <button type="button" class="btn-danger js-remove-parallel">Quitar paralelo</button>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Codigo paralelo</label>
+            <input class="parallel-code" value="${escapeHtml(prefill.codigo || '')}" placeholder="01" />
+          </div>
+          <div class="field">
+            <label>Maestros del paralelo (coma)</label>
+            <input class="parallel-teachers" value="${escapeHtml(safeArray(prefill.maestros).join(', '))}" placeholder="DOCENTE 1, DOCENTE 2" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Restricción de clases teóricas</label>
+          <select class="parallel-theory-restriction">
+            <option value="none" ${theoryRestriction === 'none' ? 'selected' : ''}>Sin restricción</option>
+            <option value="days_distinct" ${theoryRestriction === 'days_distinct' ? 'selected' : ''}>Días distintos (pueden ser consecutivos)</option>
+            <option value="days_gap_1" ${theoryRestriction === 'days_gap_1' ? 'selected' : ''}>Separadas con al menos 1 día</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn-soft js-add-class">Agregar clase</button>
+          <button type="button" class="btn-soft js-template-classes">Plantilla 2 Cát + 1 Ay.</button>
+        </div>
+
+        <div class="class-list"></div>
+      `;
+
+      els.parallelList.appendChild(card);
+      if (classes.length) {
+        classes.forEach((cls) => addClassCard(card, cls));
+      } else {
+        addClassCard(card, { tipo: state.classTypes[0] || 'Cát' });
+      }
+    }
+
+    function addClassCard(parallelCard, prefill = {}) {
+      const mode = inferClassMode(prefill.maestros);
+      const schedule = prefill.horario_predefinido || {};
+      const hasSchedule = Boolean(schedule?.dia || schedule?.bloque);
+      const classCard = document.createElement('div');
+      classCard.className = 'class-card';
+      classCard.innerHTML = `
+        <div class="block-head">
+          <div class="block-title">Clase</div>
+          <button type="button" class="btn-danger js-remove-class">Quitar clase</button>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Tipo</label>
+            <select class="class-type">${renderClassOptions(prefill.tipo || state.classTypes[0] || 'Cát')}</select>
+          </div>
+          <div class="field">
+            <label>Maestros en clase</label>
+            <select class="class-mode">
+              <option value="omit" ${mode === 'omit' ? 'selected' : ''}>Omitir (hereda paralelo)</option>
+              <option value="null" ${mode === 'null' ? 'selected' : ''}>null (no hay maestro)</option>
+              <option value="list" ${mode === 'list' ? 'selected' : ''}>Lista propia</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field class-teachers-wrap" style="display:${mode === 'list' ? 'grid' : 'none'}">
+          <label>Maestros de la clase (coma)</label>
+          <input class="class-teachers" value="${escapeHtml(safeArray(prefill.maestros).join(', '))}" placeholder="DOCENTE A, DOCENTE B" />
+        </div>
+
+        <label class="muted" style="display:flex; gap:8px; align-items:center; margin-top:4px;">
+          <input class="class-has-schedule" type="checkbox" ${hasSchedule ? 'checked' : ''} />
+          Incluir horario_predefinido
+        </label>
+
+        <div class="row class-schedule-wrap" style="display:${hasSchedule ? 'grid' : 'none'}">
+          <div class="field">
+            <label>Dia</label>
+            <input class="class-day" value="${escapeHtml(schedule?.dia || '')}" placeholder="Lu" />
+          </div>
+          <div class="field">
+            <label>Bloque</label>
+            <input class="class-block" value="${escapeHtml(schedule?.bloque || '')}" placeholder="3-4" />
+          </div>
+        </div>
+      `;
+
+      parallelCard.querySelector('.class-list').appendChild(classCard);
+    }
+
+    function resetEditor() {
+      state.editSubjectIndex = null;
+      els.subjectCode.value = '';
+      els.subjectName.value = '';
+      els.subjectHasCourse.checked = true;
+      els.career.value = '';
+      els.courseSemester.value = '';
+      syncCourseUI();
+      els.parallelList.innerHTML = '';
+      addParallelCard({
+        codigo: '01',
+        maestros: [],
+        clases: [
+          { tipo: 'Cát' },
+          { tipo: 'Cát' },
+          { tipo: 'Ay.', maestros: null }
+        ]
+      });
+      clearStatus();
+    }
+
+    function collectSubjectFromEditor() {
+      const codigo = els.subjectCode.value.trim();
+      const nombre = els.subjectName.value.trim();
+      const hasCourse = Boolean(els.subjectHasCourse.checked);
+      const carrera = els.career.value.trim();
+      const semestre = els.courseSemester.value.trim();
+
+      if (!codigo || !nombre) {
+        throw new Error('Completa codigo y nombre.');
+      }
+
+      if (hasCourse && (!carrera || !semestre)) {
+        throw new Error('Si la asignatura tiene curso, completa carrera y semestre.');
+      }
+
+      const parallelCards = Array.from(els.parallelList.querySelectorAll('.parallel-card'));
+      if (!parallelCards.length) {
+        throw new Error('Agrega al menos un paralelo.');
+      }
+
+      const paralelos = parallelCards.map((card, index) => {
+        const parallelCode = card.querySelector('.parallel-code')?.value.trim();
+        if (!parallelCode) {
+          throw new Error(`Paralelo #${index + 1}: codigo requerido.`);
+        }
+
+        const parallelTeachers = splitComma(card.querySelector('.parallel-teachers')?.value);
+        const theoryRestriction = normalizeTheoryRestriction(
+          card.querySelector('.parallel-theory-restriction')?.value || card.dataset.theoryRestriction
+        );
+        card.dataset.theoryRestriction = theoryRestriction;
+        const classCards = Array.from(card.querySelectorAll('.class-card'));
+        if (!classCards.length) {
+          throw new Error(`Paralelo ${parallelCode}: agrega al menos una clase.`);
+        }
+
+        const clases = classCards.map((classCard, classIndex) => {
+          const tipo = classCard.querySelector('.class-type')?.value.trim();
+          if (!tipo) {
+            throw new Error(`Paralelo ${parallelCode}, clase #${classIndex + 1}: tipo requerido.`);
+          }
+
+          const mode = classCard.querySelector('.class-mode')?.value;
+          const cls = { tipo };
+
+          if (mode === 'null') {
+            cls.maestros = null;
+          } else if (mode === 'list') {
+            const classTeachers = splitComma(classCard.querySelector('.class-teachers')?.value);
+            if (!classTeachers.length) {
+              throw new Error(`Paralelo ${parallelCode}, clase #${classIndex + 1}: agrega maestros o cambia el modo.`);
+            }
+            cls.maestros = classTeachers;
+          }
+
+          if (classCard.querySelector('.class-has-schedule')?.checked) {
+            const dia = classCard.querySelector('.class-day')?.value.trim();
+            const bloque = classCard.querySelector('.class-block')?.value.trim();
+            if (!dia || !bloque) {
+              throw new Error(`Paralelo ${parallelCode}, clase #${classIndex + 1}: completa dia y bloque.`);
+            }
+            cls.horario_predefinido = { dia, bloque };
+          }
+
+          return cls;
+        });
+
+        return {
+          codigo: parallelCode,
+          maestros: parallelTeachers,
+          restriccion_teoricas: theoryRestriction,
+          clases
+        };
+      });
+
+      for (const parallel of paralelos) {
+        parallel.restriccion_teoricas = normalizeTheoryRestriction(parallel.restriccion_teoricas);
+      }
+
+      return {
+        codigo,
+        nombre,
+        curso: hasCourse ? {
+          carrera,
+          semestre
+        } : null,
+        paralelos
+      };
+    }
+
+    function rebuildRestrictionsFromState() {
+      const restrictionBuckets = {
+        CLASES_TEORICAS_DIAS_DISTINTOS: [],
+        CLASES_TEORICAS_SEPARADAS_1_DIA: []
+      };
+
+      const seenParallelRules = new Set();
+      for (const subject of getSubjects()) {
+        const codigoAsignatura = String(subject?.codigo || '').trim();
+        for (const parallel of safeArray(subject?.paralelos)) {
+          parallel.restriccion_teoricas = normalizeTheoryRestriction(parallel?.restriccion_teoricas);
+          const key = restrictionEntryKey(codigoAsignatura, parallel?.codigo);
+          const normalizedRule = normalizeTheoryRestriction(parallel?.restriccion_teoricas);
+          const bucket = theoryRestrictionListKey(normalizedRule);
+          if (!bucket) continue;
+          if (seenParallelRules.has(`${bucket}:${key}`)) continue;
+          seenParallelRules.add(`${bucket}:${key}`);
+          restrictionBuckets[bucket].push({
+            codigo_asignatura: codigoAsignatura,
+            paralelo: String(parallel?.codigo || '').trim()
+          });
+        }
+      }
+
+      const teacherRestrictions = uniqueTeachers(state.teachers)
+        .filter((teacher) => normalizeTeacherName(teacher?.nombre))
+        .map((teacher) => {
+          const flags = normalizeTeacherRestrictionFlags(teacher.restricciones);
+          return {
+            nombre: teacher.nombre,
+            respeta_max_carga_diaria: Boolean(flags.respeta_max_carga_diaria),
+            max_carga_diaria: readIntOr(flags.max_carga_diaria, defaultTeacherRestrictionFlags().max_carga_diaria),
+            respeta_max_carga_semanal: Boolean(flags.respeta_max_carga_semanal),
+            max_carga_semanal: readIntOr(flags.max_carga_semanal, defaultTeacherRestrictionFlags().max_carga_semanal)
+          };
+        });
+
+      state.data.restricciones = state.data.restricciones && typeof state.data.restricciones === 'object'
+        ? state.data.restricciones
+        : {};
+      state.data.restricciones.MAX_CARGA_DIARIA = readIntOr(els.maxCargaDiaria.value, 8);
+      state.data.restricciones.MAX_CARGA_BLOQUE = readIntOr(els.maxCargaBloque.value, 15);
+      state.data.restricciones.CLASES_TEORICAS_DIAS_DISTINTOS = restrictionBuckets.CLASES_TEORICAS_DIAS_DISTINTOS;
+      state.data.restricciones.CLASES_TEORICAS_SEPARADAS_1_DIA = restrictionBuckets.CLASES_TEORICAS_SEPARADAS_1_DIA;
+      state.data.restricciones.PROFESORES = teacherRestrictions;
+    }
+
+    function renderPreviewJSON() {
+      if (!state.data) {
+        els.preview.textContent = '{}';
+        return;
+      }
+      syncDataFromForms();
+      els.preview.textContent = JSON.stringify(state.data, null, 2);
+    }
+
+    function updateCounters() {
+      const subjects = getSubjects();
+      let parallels = 0;
+      let classes = 0;
+      for (const subject of subjects) {
+        const subjectParallels = safeArray(subject?.paralelos);
+        parallels += subjectParallels.length;
+        for (const parallel of subjectParallels) classes += safeArray(parallel?.clases).length;
+      }
+      els.countSubjects.textContent = `Asignaturas: ${subjects.length}`;
+      els.countParallels.textContent = `Paralelos: ${parallels}`;
+      els.countClasses.textContent = `Clases: ${classes}`;
+      els.countTeachers.textContent = `Maestros: ${state.teachers.length}`;
+    }
+
+    function renderTeachers() {
+      renderTeacherForm();
+      renderPreviewJSON();
+    }
+
+    function renderAbanico() {
+      const subjects = getSubjects();
+      if (!subjects.length) {
+        els.abanicoList.innerHTML = '<div class="empty">Carga un archivo JSON para visualizar y editar la planilla.</div>';
+        updateCounters();
+        renderPreviewJSON();
+        return;
+      }
+
+      els.abanicoList.innerHTML = subjects.map((subject, subjectIndex) => {
+        const codigo = subject?.codigo || '';
+        const nombre = subject?.nombre || '';
+        const carrera = subject?.curso?.carrera || subject?.curso?.carreras || '';
+        const semestre = subject?.curso?.semestre || '';
+        const paralelos = safeArray(subject?.paralelos);
+        const minor = [
+          carrera && semestre ? `${carrera}-${semestre}` : carrera,
+          `Paralelos: ${paralelos.length}`
+        ].filter(Boolean).join(' · ');
+
+        return `
+          <details>
+            <summary>
+              <div class="sumline">
+                <div>
+                  <div class="summain">${escapeHtml(`${codigo} - ${nombre}`)}</div>
+                  <div class="summinor">${escapeHtml(minor)}</div>
+                </div>
+                <div class="badge">${escapeHtml(carrera && semestre ? `${carrera}-${semestre}` : '')}</div>
+              </div>
+            </summary>
+            <div class="content">
+              <div class="inline-actions">
+                <button type="button" class="btn-soft js-edit-subject" data-subject-index="${subjectIndex}">Editar asignatura</button>
+                <button type="button" class="btn-danger js-delete-subject" data-subject-index="${subjectIndex}">Quitar asignatura</button>
+              </div>
+
+              ${paralelos.map((parallel, parallelIndex) => {
+                const parallelCode = parallel?.codigo || '';
+                const teachers = safeArray(parallel?.maestros);
+                const theoryRule = theoryRestrictionLabel(parallel?.restriccion_teoricas);
+                const parallelMinor = [
+                  `Maestros: ${teachers.length ? teachers.join(', ') : 'No hay maestro'}`,
+                  `Clases: ${safeArray(parallel?.clases).length}`,
+                  `Teóricas: ${theoryRule}`
+                ].join(' · ');
+
+                return `
+                  <details style="margin-top:8px;">
+                    <summary>
+                      <div class="sumline">
+                        <div>
+                          <div class="summain">${escapeHtml(`Paralelo ${parallelCode}`)}</div>
+                          <div class="summinor">${escapeHtml(parallelMinor)}</div>
+                        </div>
+                        <div class="badge">${escapeHtml(theoryRule)}</div>
+                      </div>
+                    </summary>
+                    <div class="content">
+                      <div class="inline-actions">
+                        <button type="button" class="btn-danger js-delete-parallel" data-subject-index="${subjectIndex}" data-parallel-index="${parallelIndex}">Quitar paralelo</button>
+                      </div>
+
+                      ${safeArray(parallel?.clases).map((cls, classIndex) => {
+                        const teacherText = teacherDisplayForClass(cls, parallel);
+                        const minor = [cls?.tipo || '', scheduleDisplay(cls)].filter(Boolean).join(' · ');
+                        return `
+                          <details style="margin-top:8px;">
+                            <summary>
+                              <div class="sumline">
+                                <div>
+                                  <div class="summain">${escapeHtml(`${codigo} (${nombre}) | ${carrera}-${semestre} | Paralelo ${parallelCode} | ${cls?.tipo || ''} | ${teacherText} | ${scheduleDisplay(cls)}`)}</div>
+                                  <div class="summinor">${escapeHtml(minor)}</div>
+                                </div>
+                                <div class="badge">${escapeHtml(cls?.tipo || '')}</div>
+                              </div>
+                            </summary>
+                            <div class="content">
+                              <div class="inline-actions">
+                                <button type="button" class="btn-danger js-delete-class" data-subject-index="${subjectIndex}" data-parallel-index="${parallelIndex}" data-class-index="${classIndex}">Quitar clase</button>
+                              </div>
+                            </div>
+                          </details>
+                        `;
+                      }).join('')}
+                    </div>
+                  </details>
+                `;
+              }).join('')}
+            </div>
+          </details>
+        `;
+      }).join('');
+
+      updateCounters();
+      renderPreviewJSON();
+    }
+
+    function editSubject(index) {
+      const subject = getSubjects()[index];
+      if (!subject) return;
+      state.editSubjectIndex = index;
+      els.subjectCode.value = subject?.codigo || '';
+      els.subjectName.value = subject?.nombre || '';
+      const hasCourse = Boolean(subject?.curso && typeof subject.curso === 'object');
+      els.subjectHasCourse.checked = hasCourse;
+      els.career.value = subject?.curso?.carrera || subject?.curso?.carreras || '';
+      els.courseSemester.value = subject?.curso?.semestre || '';
+      syncCourseUI();
+      els.parallelList.innerHTML = '';
+      safeArray(subject?.paralelos).forEach((parallel) => addParallelCard(parallel));
+      if (!safeArray(subject?.paralelos).length) addParallelCard({ codigo: '01', maestros: [], clases: [] });
+      showStatus(`Editando asignatura ${subject?.codigo || ''}.`, true);
+      renderPreviewJSON();
+    }
+
+    function deleteSubject(index) {
+      const subjects = getSubjects();
+      const subject = subjects[index];
+      if (!subject) return;
+      subjects.splice(index, 1);
+      if (state.editSubjectIndex === index) resetEditor();
+      else if (state.editSubjectIndex !== null && state.editSubjectIndex > index) state.editSubjectIndex -= 1;
+      syncTeachersFromPlanilla();
+      showStatus(`Asignatura ${subject?.codigo || ''} eliminada.`, true);
+      renderAbanico();
+    }
+
+    function deleteParallel(subjectIndex, parallelIndex) {
+      const subject = getSubjects()[subjectIndex];
+      if (!subject) return;
+      const parallel = safeArray(subject?.paralelos)[parallelIndex];
+      if (!parallel) return;
+      safeArray(subject.paralelos).splice(parallelIndex, 1);
+      syncTeachersFromPlanilla();
+      showStatus('Paralelo eliminado.', true);
+      renderAbanico();
+    }
+
+    function deleteClass(subjectIndex, parallelIndex, classIndex) {
+      const subject = getSubjects()[subjectIndex];
+      const parallel = safeArray(subject?.paralelos)[parallelIndex];
+      if (!parallel) return;
+      safeArray(parallel.clases).splice(classIndex, 1);
+      syncTeachersFromPlanilla();
+      showStatus('Clase eliminada.', true);
+      renderAbanico();
+    }
+
+    function addTeacherItem(prefill = {}) {
+      const hasAvail = availabilityQuality(prefill.disponibilidad) > 0 || isAvailabilityMatrix(prefill.disponibilidad);
+      state.teachers.push({
+        id: prefill.id || `t-${++state.teacherSeq}`,
+        nombre: normalizeTeacherName(prefill.nombre),
+        disponibilidad: hasAvail ? normalizeAvailability(prefill.disponibilidad) : defaultTeacherAvailability(),
+        restricciones: normalizeTeacherRestrictionFlags(prefill.restricciones),
+        origen: prefill.origen || 'manual'
+      });
+      renderTeacherForm();
+      updateCounters();
+      renderPreviewJSON();
+    }
+
+    function syncTeachersFromPlanilla() {
+      const detectedNames = extractTeachersFromPlanilla();
+      const detected = detectedNames.map((nombre) => ({ nombre, disponibilidad: defaultTeacherAvailability(), origen: 'detectado' }));
+      state.teachers = uniqueTeachers([...state.teachers, ...detected]);
+      renderTeacherForm();
+      updateCounters();
+      renderPreviewJSON();
+    }
+
+    function extractTeachersFromPlanilla() {
+      const names = [];
+      for (const subject of getSubjects()) {
+        if (Array.isArray(subject?.maestros)) names.push(...subject.maestros);
+        for (const parallel of safeArray(subject?.paralelos)) {
+          names.push(...safeArray(parallel?.maestros));
+          for (const cls of safeArray(parallel?.clases)) {
+            if (Array.isArray(cls?.maestros)) names.push(...cls.maestros);
+          }
+        }
+      }
+      return Array.from(new Set(names.map(normalizeTeacherName).filter(Boolean)));
+    }
+
+    function collectSubjectAndApply() {
+      const subject = collectSubjectFromEditor();
+      const subjects = getSubjects();
+      const code = subject.codigo.trim().toUpperCase();
+      const duplicate = subjects.some((item, index) => {
+        if (state.editSubjectIndex !== null && index === state.editSubjectIndex) return false;
+        return String(item?.codigo || '').trim().toUpperCase() === code;
+      });
+
+      if (duplicate) {
+        showStatus(`El codigo ${subject.codigo} ya existe.`, false);
+        return;
+      }
+
+      state.data.eventos = state.data.eventos || {};
+      state.data.eventos.asignaturas = subjects;
+
+      if (state.editSubjectIndex === null) {
+        state.data.eventos.asignaturas.push(subject);
+        showStatus(`Asignatura ${subject.codigo} agregada.`, true);
+      } else {
+        state.data.eventos.asignaturas[state.editSubjectIndex] = subject;
+        showStatus(`Asignatura ${subject.codigo} actualizada.`, true);
+      }
+
+      rebuildRestrictionsFromState();
+      syncTeachersFromPlanilla();
+      state.editSubjectIndex = null;
+      resetEditor();
+      renderAbanico();
+    }
+
+    function fileNameFromInput() {
+      const raw = String(els.outputName.value || '').trim();
+      if (!raw) return `${state.sourceFileName.replace(/\.json$/i, '')}.editado.json`;
+      return raw.toLowerCase().endsWith('.json') ? raw : `${raw}.json`;
+    }
+
+    function syncDataFromForms() {
+      ensureBaseData();
+      const metadatos = state.data.metadatos || {};
+      metadatos.institucion = FIXED_INSTITUTION;
+      metadatos.semestre = els.semester.value.trim() || metadatos.semestre || '';
+      const description = els.description.value.trim();
+      if (description) metadatos.descripcion = description;
+      else delete metadatos.descripcion;
+      state.data.metadatos = metadatos;
+      state.data.recursos = state.data.recursos || {};
+      state.data.recursos.maestros = uniqueTeachers(state.teachers)
+        .filter((teacher) => normalizeTeacherName(teacher?.nombre))
+        .map((teacher) => ({
+          nombre: teacher.nombre,
+          disponibilidad: normalizeAvailability(teacher.disponibilidad)
+        }));
+      state.data.recursos.estudiantes = safeArray(state.data.recursos.estudiantes);
+      state.data.eventos = state.data.eventos || {};
+      state.data.eventos.tipo_clases = Array.from(new Set([...(state.data.eventos.tipo_clases || []), ...state.classTypes]));
+
+      rebuildRestrictionsFromState();
+    }
+
+    function downloadJson() {
+      clearStatus();
+      try {
+        syncDataFromForms();
+        const json = JSON.stringify(state.data, null, 2) + '\n';
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileNameFromInput();
+        a.click();
+        URL.revokeObjectURL(url);
+        showStatus('JSON descargado.', true);
+      } catch (error) {
+        showStatus(error.message || String(error), false);
+      }
+    }
+
+    function loadFile(file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || '{}'));
+          if (!parsed?.eventos || !Array.isArray(parsed?.eventos?.asignaturas)) {
+            throw new Error('El archivo no contiene eventos.asignaturas validos.');
+          }
+
+          state.data = parsed;
+          upgradeImportedDataCompatibility(state.data);
+          state.sourceFileName = file.name || 'Semestre.json';
+          state.classTypes = detectClassTypes(parsed);
+
+          els.institution.value = FIXED_INSTITUTION;
+          els.fileState.textContent = `Archivo cargado: ${state.sourceFileName}`;
+          els.outputName.value = state.sourceFileName.replace(/\.json$/i, '.editado.json');
+          els.semester.value = parsed?.metadatos?.semestre || '';
+          els.description.value = parsed?.metadatos?.descripcion || '';
+
+          const restricciones = parsed?.restricciones && typeof parsed.restricciones === 'object' ? parsed.restricciones : {};
+          els.maxCargaDiaria.value = readIntOr(restricciones?.MAX_CARGA_DIARIA, 8);
+          els.maxCargaBloque.value = readIntOr(restricciones?.MAX_CARGA_BLOQUE, 15);
+
+          applyRestrictionMetadataFromData(parsed);
+          normalizeTeacherResourcesFromData();
+          renderTeacherForm();
+          renderAbanico();
+          resetEditor();
+          showStatus('Archivo cargado correctamente.', true);
+        } catch (error) {
+          state.data = null;
+          state.teachers = [];
+          els.fileState.textContent = 'Sin archivo cargado.';
+          renderTeacherForm();
+          renderAbanico();
+          showStatus(error.message || String(error), false);
+        }
+      };
+      reader.readAsText(file, 'utf-8');
+    }
+
+    function normalizeTeacherResourcesFromData() {
+      const restrictionMap = new Map(
+        safeArray(state.data?.restricciones?.PROFESORES || state.data?.restricciones?.profesores).map((item) => {
+          const name = normalizeTeacherName(item?.nombre);
+          return [name.toLowerCase(), normalizeTeacherRestrictionFlags(item)];
+        })
+      );
+
+      const teachers = safeArray(state.data?.recursos?.maestros).map((teacher) => {
+        const nombre = normalizeTeacherName(teacher?.nombre);
+        const teacherFlags = restrictionMap.get(nombre.toLowerCase()) || normalizeTeacherRestrictionFlags(teacher?.restricciones);
+        return {
+          nombre: teacher?.nombre,
+          disponibilidad: normalizeAvailability(teacher?.disponibilidad),
+          restricciones: teacherFlags,
+          origen: 'archivo'
+        };
+      });
+      state.teachers = uniqueTeachers(teachers);
+      syncTeachersFromPlanilla();
+    }
+
+    function renderPreviewData() {
+      if (!state.data) {
+        els.preview.textContent = '{}';
+        return;
+      }
+      syncDataFromForms();
+      els.preview.textContent = JSON.stringify(state.data, null, 2);
+    }
+
+    function handleTeacherInputChange() {
+      readTeachersFromDOM();
+      renderPreviewData();
+    }
+
+    function getDailyTeacherDefaultValue() {
+      return Math.floor(readIntOr(els.maxCargaDiaria.value, 8) / 2);
+    }
+
+    function toggleDailyDefaultUI(card, useDefault) {
+      if (!(card instanceof HTMLElement)) return;
+      const defaultText = card.querySelector('.teacher-daily-default-text');
+      const valueInput = card.querySelector('.teacher-rule-daily-value');
+      const maxCargaDiariaGlobal = readIntOr(els.maxCargaDiaria.value, 8);
+      const expectedValue = getDailyTeacherDefaultValue();
+
+      if (defaultText instanceof HTMLElement) {
+        defaultText.textContent = `Default (MAX_CARGA_DIARIA/2 = ${expectedValue})`;
+        defaultText.style.display = useDefault ? 'block' : 'none';
+      }
+
+      if (valueInput instanceof HTMLInputElement) {
+        if (useDefault) valueInput.value = String(expectedValue);
+        valueInput.style.display = useDefault ? 'none' : 'block';
+      }
+    }
+
+    function saveTeacherFromCard(card) {
+      if (!card) return;
+      readTeachersFromDOM();
+      renderTeacherForm();
+      renderPreviewData();
+      showStatus('Cambios del maestro guardados.', true);
+    }
+
+    els.jsonFile.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      if (file) loadFile(file);
+    });
+
+    els.newSubject.addEventListener('click', () => {
+      resetEditor();
+      showStatus('Editor listo para nueva asignatura.', true);
+      renderPreviewData();
+    });
+
+    els.templateSubject.addEventListener('click', () => {
+      els.parallelList.innerHTML = '';
+      addParallelCard({
+        codigo: '01',
+        maestros: [],
+        clases: [
+          { tipo: state.classTypes[0] || 'Cát' },
+          { tipo: state.classTypes[0] || 'Cát' },
+          { tipo: state.classTypes.includes('Ay.') ? 'Ay.' : (state.classTypes[1] || 'Ay.'), maestros: null }
+        ]
+      });
+      renderPreviewData();
+    });
+
+    els.addParallel.addEventListener('click', () => {
+      addParallelCard({ codigo: '', maestros: [], clases: [] });
+      renderPreviewData();
+    });
+
+    els.saveSubject.addEventListener('click', () => {
+      clearStatus();
+      try {
+        collectSubjectAndApply();
+        renderAbanico();
+      } catch (error) {
+        showStatus(error.message || String(error), false);
+      }
+    });
+
+    els.downloadJson.addEventListener('click', downloadJson);
+    els.syncTeachers.addEventListener('click', () => {
+      syncTeachersFromPlanilla();
+      showStatus('Maestros sincronizados desde la planilla.', true);
+    });
+
+    els.addTeacher.addEventListener('click', () => {
+      addTeacherItem({ nombre: '', disponibilidad: [], origen: 'manual' });
+      showStatus('Maestro agregado manualmente.', true);
+    });
+
+    els.openAll.addEventListener('click', () => {
+      els.abanicoList.querySelectorAll('details').forEach((detail) => { detail.open = true; });
+    });
+
+    els.closeAll.addEventListener('click', () => {
+      els.abanicoList.querySelectorAll('details').forEach((detail) => { detail.open = false; });
+    });
+
+    els.teacherList.addEventListener('input', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.classList.contains('teacher-rule-daily-value')) {
+        const card = target.closest('.resource');
+        if (!card) return;
+        const enabled = card.querySelector('.teacher-rule-daily-enabled');
+        if (!(enabled instanceof HTMLInputElement)) return;
+
+        const expectedValue = getDailyTeacherDefaultValue();
+        const currentValue = readIntOr(target.value, expectedValue);
+        enabled.checked = currentValue === expectedValue;
+        toggleDailyDefaultUI(card, enabled.checked);
+      }
+
+      handleTeacherInputChange();
+    });
+    els.teacherList.addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.classList.contains('teacher-rule-daily-enabled')) {
+        const card = target.closest('.resource');
+        if (!card) return;
+        toggleDailyDefaultUI(card, Boolean(target.checked));
+        handleTeacherInputChange();
+        return;
+      }
+
+      if (target.classList.contains('teacher-rule-weekly-enabled')) {
+        const card = target.closest('.resource');
+        if (!card) return;
+        const defaultText = card.querySelector('.teacher-weekly-default-text');
+        const valueInput = card.querySelector('.teacher-rule-weekly-value');
+        const useDefault = Boolean(target.checked);
+        if (defaultText instanceof HTMLElement) {
+          defaultText.style.display = useDefault ? 'block' : 'none';
+        }
+        if (valueInput instanceof HTMLInputElement) {
+          valueInput.style.display = useDefault ? 'none' : 'block';
+          if (!useDefault && (valueInput.value.trim() === '' || valueInput.value === 'default')) {
+            valueInput.value = '3';
+          }
+        }
+        handleTeacherInputChange();
+      }
+    });
+    els.maxCargaDiaria.addEventListener('input', () => {
+      els.teacherList.querySelectorAll('.resource').forEach((card) => {
+        if (!(card instanceof HTMLElement)) return;
+        const enabled = card.querySelector('.teacher-rule-daily-enabled');
+        if (enabled instanceof HTMLInputElement) {
+          toggleDailyDefaultUI(card, enabled.checked);
+        }
+      });
+      handleTeacherInputChange();
+    });
+    els.maxCargaBloque.addEventListener('input', renderPreviewData);
+    els.teacherList.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.classList.contains('js-avail-cell')) {
+        target.classList.toggle('on');
+        target.setAttribute('aria-pressed', target.classList.contains('on') ? 'true' : 'false');
+        handleTeacherInputChange();
+        return;
+      }
+
+      if (target.classList.contains('js-save-teacher')) {
+        const card = target.closest('.resource');
+        saveTeacherFromCard(card);
+        return;
+      }
+
+      if (target.classList.contains('js-remove-teacher')) {
+        const card = target.closest('.resource');
+        if (!card) return;
+        const index = Number(card.dataset.teacherIndex);
+        if (!Number.isInteger(index)) return;
+        state.teachers.splice(index, 1);
+        renderTeacherForm();
+        updateCounters();
+        renderPreviewData();
+      }
+    });
+
+    els.parallelList.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.classList.contains('js-remove-parallel')) {
+        target.closest('.parallel-card')?.remove();
+        renderPreviewData();
+      }
+
+      if (target.classList.contains('js-add-class')) {
+        const card = target.closest('.parallel-card');
+        if (card) addClassCard(card, { tipo: state.classTypes[0] || 'Cát' });
+        renderPreviewData();
+      }
+
+      if (target.classList.contains('js-template-classes')) {
+        const card = target.closest('.parallel-card');
+        if (!card) return;
+        const list = card.querySelector('.class-list');
+        list.innerHTML = '';
+        addClassCard(card, { tipo: state.classTypes[0] || 'Cát' });
+        addClassCard(card, { tipo: state.classTypes[0] || 'Cát' });
+        addClassCard(card, { tipo: state.classTypes.includes('Ay.') ? 'Ay.' : (state.classTypes[1] || 'Ay.'), maestros: null });
+        renderPreviewData();
+      }
+
+      if (target.classList.contains('js-remove-class')) {
+        target.closest('.class-card')?.remove();
+        renderPreviewData();
+      }
+    });
+
+    els.parallelList.addEventListener('change', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.classList.contains('class-mode')) {
+        const card = target.closest('.class-card');
+        if (!card) return;
+        const wrap = card.querySelector('.class-teachers-wrap');
+        if (wrap) wrap.style.display = target.value === 'list' ? 'grid' : 'none';
+      }
+      if (target.classList.contains('class-has-schedule')) {
+        const card = target.closest('.class-card');
+        if (!card) return;
+        const wrap = card.querySelector('.class-schedule-wrap');
+        if (wrap) wrap.style.display = target.checked ? 'grid' : 'none';
+      }
+      if (target.classList.contains('parallel-theory-restriction')) {
+        const card = target.closest('.parallel-card');
+        if (card) card.dataset.theoryRestriction = normalizeTheoryRestriction(target.value);
+        renderPreviewData();
+      }
+    });
+
+    els.abanicoList.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+
+      if (target.classList.contains('js-edit-subject')) {
+        editSubject(Number(target.dataset.subjectIndex));
+      }
+      if (target.classList.contains('js-delete-subject')) {
+        deleteSubject(Number(target.dataset.subjectIndex));
+      }
+      if (target.classList.contains('js-delete-parallel')) {
+        deleteParallel(Number(target.dataset.subjectIndex), Number(target.dataset.parallelIndex));
+      }
+      if (target.classList.contains('js-delete-class')) {
+        deleteClass(Number(target.dataset.subjectIndex), Number(target.dataset.parallelIndex), Number(target.dataset.classIndex));
+      }
+    });
+
+    [els.outputName, els.semester, els.description, els.subjectCode, els.subjectName, els.career, els.courseSemester].forEach((el) => {
+      el.addEventListener('input', renderPreviewData);
+    });
+
+    els.subjectHasCourse.addEventListener('change', () => {
+      syncCourseUI();
+      renderPreviewData();
+    });
+
+    function buildInitialUI() {
+      els.institution.value = FIXED_INSTITUTION;
+      els.outputName.value = 'Semestre editado.json';
+      syncCourseUI();
+      renderTeacherForm();
+      renderAbanico();
+      resetEditor();
+      renderPreviewData();
+    }
+
+    buildInitialUI();
+  </script>
+</body>
+</html>

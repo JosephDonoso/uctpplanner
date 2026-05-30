@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      .row { margin-bottom: 10px; }
+      label { display: block; font-size: 12px; margin-bottom: 4px; }
+      input[type="text"], input[type="number"] { width: 100%; box-sizing: border-box; padding: 6px; }
+      .actions { display: flex; gap: 8px; margin-top: 12px; }
+      button { padding: 8px 10px; }
+      .hint { font-size: 12px; color: #444; margin-top: 8px; }
+      .ok { font-size: 12px; color: #0b6; margin-top: 8px; }
+      .err { font-size: 12px; color: #b00; margin-top: 8px; }
+    </style>
+  </head>
+  <body>
+    <h3>Parámetros Evaluación FO</h3>
+
+    <div class="row">
+      <label for="alfa">ALFA</label>
+      <input id="alfa" type="number" step="0.01" value="<?= config.alfa ?>" />
+    </div>
+
+    <div class="row">
+      <label for="cv_ideal">CV ideal</label>
+      <input id="cv_ideal" type="number" step="0.001" value="<?= config.cv_ideal ?>" />
+    </div>
+
+    <div class="row">
+      <label for="ventana_ideal">Ventana ideal (umbral)</label>
+      <input id="ventana_ideal" type="number" step="1" value="<?= config.ventana_ideal ?>" />
+    </div>
+
+    <div class="row">
+      <label>
+        <input id="resolver_segmentacion" type="checkbox" <?= config.resolver_segmentacion ? 'checked' : '' ?> />
+        Resolver segmentación de estudiantes
+      </label>
+    </div>
+
+    <hr />
+
+    <div class="row">
+      <label for="hoja_malla">Hoja malla</label>
+      <input id="hoja_malla" type="text" value="<?= config.hoja_malla ?>" />
+    </div>
+
+    <div class="row">
+      <label for="hoja_horarios">Hoja horarios</label>
+      <input id="hoja_horarios" type="text" value="<?= config.hoja_horarios ?>" />
+    </div>
+
+    <div class="row">
+      <label for="hoja_matriculas">Hoja matrículas</label>
+      <input id="hoja_matriculas" type="text" value="<?= config.hoja_matriculas ?>" />
+    </div>
+
+    <div class="actions">
+      <button type="button" onclick="guardar()">Guardar</button>
+      <button type="button" onclick="google.script.host.close()">Cerrar</button>
+    </div>
+
+    <div id="msg" class="hint">Se guardan en Propiedades del documento (no en celdas).</div>
+
+    <script>
+      function guardar() {
+        const payload = {
+          alfa: document.getElementById('alfa').value,
+          cv_ideal: document.getElementById('cv_ideal').value,
+          ventana_ideal: document.getElementById('ventana_ideal').value,
+          resolver_segmentacion: document.getElementById('resolver_segmentacion').checked ? 1 : 0,
+          hoja_malla: document.getElementById('hoja_malla').value,
+          hoja_horarios: document.getElementById('hoja_horarios').value,
+          hoja_matriculas: document.getElementById('hoja_matriculas').value
+        };
+
+        const msg = document.getElementById('msg');
+        msg.className = 'hint';
+        msg.textContent = 'Guardando...';
+
+        try {
+          if (!(google && google.script && google.script.run)) {
+            msg.className = 'err';
+            msg.textContent = 'No se pudo llamar al backend (google.script.run no disponible). Recarga la planilla y vuelve a abrir el panel.';
+            return;
+          }
+
+          let finished = false;
+          const timer = setTimeout(function() {
+            if (finished) return;
+            msg.className = 'err';
+            msg.textContent = 'El guardado está tardando demasiado. Recarga la planilla y vuelve a intentar (si estabas autorizado, debería ser instantáneo).';
+          }, 15000);
+
+          google.script.run
+            .withSuccessHandler(function(res) {
+              finished = true;
+              clearTimeout(timer);
+              msg.className = 'ok';
+              msg.textContent = 'Guardado. (Se aplicará en la próxima ejecución)';
+            })
+            .withFailureHandler(function(err) {
+              finished = true;
+              clearTimeout(timer);
+              msg.className = 'err';
+              msg.textContent = 'Error: ' + (err && err.message ? err.message : String(err));
+            })
+            .guardarConfiguracionFO(payload);
+        } catch (e) {
+          msg.className = 'err';
+          msg.textContent = 'Error en el panel: ' + (e && e.message ? e.message : String(e));
+        }
+      }
+    </script>
+  </body>
+</html>

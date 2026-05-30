@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.log
+
+data/output/*
+!data/output/.gitkeep
+
+*.generado.json
+results.txt
+warnings_logs.txt
+graficos_optimizacion.png

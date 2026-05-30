@@ -1,0 +1,40 @@
+{
+  "dominio": {
+    "json_path": "data/input/test.json",
+    "institucion": "PUCV - Escuela de Ingenieria en Informatica",
+    "semestre": "2025-1",
+    "max_carga_diaria": 8,
+    "max_carga_bloque": 15
+  },
+  "greedy": {
+    "umbral_varianza_aceptable": 0.05,
+    "umbral_compatibilidad_intercurso": 0.25,
+    "asignacion_inteligente": true,
+    "max_reintentos": 100
+  },
+  "ssp": {
+    "alfa": 0.2,
+    "cv_ideal": 0.1,
+    "ventana_ideal": 4
+  },
+  "uctp": {
+    "max_iteraciones": 100,
+    "max_iteraciones_sin_mejora": 50,
+    "tamano_lista_tabu": 25,
+    "tamano_vecindario": 50,
+    "resolver_ssp": true
+  },
+  "flujo": {
+    "max_iteraciones": 1
+  },
+  "salida": {
+    "ruta_json": null,
+    "ruta_graficos": "data/output/graficos_optimizacion.png",
+    "ruta_resultados": "data/output/results.txt",
+    "guardar_graficos": true,
+    "guardar_resultados": true
+  },
+  "ejecucion": {
+    "seed": 703
+  }
+}

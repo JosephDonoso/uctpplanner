@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8" />
+    <style>
+      body { font-family: Arial, sans-serif; padding: 12px; }
+      .row { margin: 10px 0; }
+      button { padding: 8px 12px; cursor: pointer; margin-right: 8px; }
+      .muted { color: #666; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="row">
+      <input id="file" type="file" multiple accept=".json,application/json" />
+    </div>
+
+    <div class="row">
+      <button id="btnPeriodo">Cargar Horario Maestro</button>
+    </div>
+    <div class="row">
+      <button id="btnDisp">Cargar Disponibilidad Docente</button>
+    </div>
+    <div class="row">
+      <button id="btnHorario">Cargar Horario Docente</button>
+    </div>
+
+    <div class="row">
+      <button id="btnAsignaturas">Cargar Asignaturas</button>
+    </div>
+    <div class="row">
+      <button id="btnProfesores">Cargar Profesores</button>
+    </div>
+    <div class="row">
+      <button id="btnAlumnos">Cargar Alumnos</button>
+    </div>
+    <div class="row">
+      <button id="btnAll">Cargar Todo</button>
+    </div>
+
+    <div class="row muted" id="status"></div>
+
+    <script>
+      const fileEl = document.getElementById('file');
+      const statusEl = document.getElementById('status');
+      const btnPeriodo = document.getElementById('btnPeriodo');
+      const btnDisp = document.getElementById('btnDisp');
+      const btnHorario = document.getElementById('btnHorario');
+      const btnAsignaturas = document.getElementById('btnAsignaturas');
+      const btnProfesores = document.getElementById('btnProfesores');
+      const btnAlumnos = document.getElementById('btnAlumnos');
+      const btnAll = document.getElementById('btnAll');
+
+      function setStatus(msg) { statusEl.textContent = msg || ''; }
+
+      function readFileAsText(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('No se pudo leer el archivo: ' + file.name));
+          reader.readAsText(file, 'utf-8');
+        });
+      }
+
+      async function buildPayload() {
+        const files = Array.from(fileEl.files || []);
+        if (!files.length) throw new Error('Selecciona un .json');
+
+        const payload = [];
+        for (const f of files) {
+          const text = await readFileAsText(f);
+          payload.push({ name: f.name, text });
+        }
+        return payload;
+      }
+
+      function setBusy(busy) {
+        btnPeriodo.disabled = busy;
+        btnDisp.disabled = busy;
+        btnHorario.disabled = busy;
+        btnAsignaturas.disabled = busy;
+        btnProfesores.disabled = busy;
+        btnAlumnos.disabled = busy;
+        btnAll.disabled = busy;
+      }
+
+      async function run(actionName, label) {
+        setBusy(true);
+        setStatus(`Leyendo archivos…`);
+        try {
+          const payload = await buildPayload();
+          setStatus(`Generando: ${label}…`);
+
+          google.script.run
+            .withSuccessHandler((res) => {
+              setStatus(`Listo (${label}). ${res.count} archivo(s).`);
+              setBusy(false);
+            })
+            .withFailureHandler((err) => {
+              setStatus(err && err.message ? err.message : String(err));
+              setBusy(false);
+            })[actionName](payload);
+
+        } catch (e) {
+          setStatus(e.message || String(e));
+          setBusy(false);
+        }
+      }
+
+      btnPeriodo.addEventListener('click', () => run('writePeriodScheduleFromJsonFiles', 'Horario Maestro'));
+      btnDisp.addEventListener('click', () => run('writeAvailabilityFromJsonFiles', 'Disponibilidad'));
+      btnHorario.addEventListener('click', () => run('writeScheduleFromJsonFiles', 'Horario docente'));
+      btnAsignaturas.addEventListener('click', () => run('writeAsignaturasFromJsonFiles', 'Asignaturas'));
+      btnProfesores.addEventListener('click', () => run('writeProfesoresFromJsonFiles', 'Profesores'));
+      btnAlumnos.addEventListener('click', () => run('writeAlumnosFromJsonFiles', 'Alumnos'));
+      btnAll.addEventListener('click', () => run('writeAllFromJsonFiles', 'Todas las hojas'));
+    </script>
+  </body>
+</html>
