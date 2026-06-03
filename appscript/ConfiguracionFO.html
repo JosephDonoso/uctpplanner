@@ -42,11 +42,6 @@
     <hr />
 
     <div class="row">
-      <label for="hoja_malla">Hoja malla</label>
-      <input id="hoja_malla" type="text" value="<?= config.hoja_malla ?>" />
-    </div>
-
-    <div class="row">
       <label for="hoja_horarios">Hoja horarios</label>
       <input id="hoja_horarios" type="text" value="<?= config.hoja_horarios ?>" />
     </div>
@@ -70,7 +65,6 @@
           cv_ideal: document.getElementById('cv_ideal').value,
           ventana_ideal: document.getElementById('ventana_ideal').value,
           resolver_segmentacion: document.getElementById('resolver_segmentacion').checked ? 1 : 0,
-          hoja_malla: document.getElementById('hoja_malla').value,
           hoja_horarios: document.getElementById('hoja_horarios').value,
           hoja_matriculas: document.getElementById('hoja_matriculas').value
         };

@@ -11,6 +11,14 @@ Nota importante: el script ahora escribe dos paneles en la misma hoja para facil
 
 Ambos paneles contienen las mismas secciones y columnas, por lo que puedes comparar directamente métricas (FO, choques, distribuciones y rankings).
 
+Después de ambos paneles, el script agrega una tabla comparativa en orden alfabético por asignatura:
+
+- **Asignatura**: sigla del curso.
+- **#Par**: cantidad de paralelos detectados.
+- **Total**: total de alumnos asociados a la asignatura.
+- **CV (optimizada)** y **ocupación (optimizada)**: valores del tier list de la corrida con búsqueda local.
+- **CV (solo DFS)** y **ocupación (solo DFS)**: valores del tier list de la corrida DFS puro sin búsqueda local.
+
 ---
 
 ## 0) Parámetros (hoja “Evaluación de FO”)
@@ -24,8 +32,8 @@ Además, los parámetros se pueden configurar desde el **menú de la planilla** 
 - **VENTANA IDEAL** (`I5`):
   - Se usa como “ventana ideal” al construir el ratio de ventana.
   - También es el **umbral** de penalización cuadrática para ventanas.
-- **HOJA MALLA** (`I7`), **HOJA HORARIOS** (`I8`), **HOJA MATRÍCULAS** (`I9`): nombres de hojas de entrada.
-- **RESOLVER SEGMENTACIÓN DE ESTUDIANTES** (`I10`, valor `0` o `1`):
+- **HOJA HORARIOS** (`I7`), **HOJA MATRÍCULAS** (`I8`): nombres de hojas de entrada.
+- **RESOLVER SEGMENTACIÓN DE ESTUDIANTES** (`I9`, valor `0` o `1`):
   - `0` → **Usa los paralelos tal como vienen en matrícula** (no se re-asigna nada).
   - `1` → **Resuelve segmentación**: desde la lista de asignaturas por estudiante, el script elige un paralelo por asignatura para cada estudiante.
 
@@ -42,7 +50,7 @@ En la planilla, en el menú superior, existe **Evaluación FO** con:
 1) Si existe configuración guardada desde UI → se usa esa.
 2) Si no existe → se leen los parámetros desde la hoja.
 
-> Nota: para compatibilidad, el script también intenta interpretar el valor de segmentación si quedó en otra celda (p.ej. `H11`), pero la vía recomendada es `I10` o el menú.
+> Nota: para compatibilidad, el script también intenta interpretar el valor de segmentación si quedó en otra celda antigua (p.ej. `I10`, `H11` o `I11`), pero la vía recomendada es `I9` o el menú.
 
 ### 0.1 ¿Qué significa “resolver segmentación” en este contexto?
 

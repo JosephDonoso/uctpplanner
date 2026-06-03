@@ -142,9 +142,21 @@ function _defaultConfigEvaluacion_() {
     cv_ideal: 0.1,
     ventana_ideal: 4,
     resolver_segmentacion: 0,
-    hoja_malla: "MALLAS",
     hoja_horarios: "HorariosYSalas",
     hoja_matriculas: "Matrículas2025-1"
+  };
+}
+
+function _normalizarConfigEvaluacion_(cfg, defaults) {
+  const base = defaults || _defaultConfigEvaluacion_();
+  const source = cfg || {};
+  return {
+    alfa: _numOrDefault_(source.alfa, base.alfa),
+    cv_ideal: _numOrDefault_(source.cv_ideal, base.cv_ideal),
+    ventana_ideal: _numOrDefault_(source.ventana_ideal, base.ventana_ideal),
+    resolver_segmentacion: _bool01OrDefault_(source.resolver_segmentacion, base.resolver_segmentacion),
+    hoja_horarios: _textOrDefault_(source.hoja_horarios, base.hoja_horarios),
+    hoja_matriculas: _textOrDefault_(source.hoja_matriculas, base.hoja_matriculas)
   };
 }
 
@@ -154,7 +166,13 @@ function _getUIConfigOverride_() {
   if (!raw) return null;
   try {
     const obj = JSON.parse(raw);
-    return obj && typeof obj === "object" ? obj : null;
+    if (!(obj && typeof obj === "object")) return null;
+    const normalized = _normalizarConfigEvaluacion_(obj, _defaultConfigEvaluacion_());
+    const normalizedRaw = JSON.stringify(normalized);
+    if (normalizedRaw !== raw) {
+      props.setProperty(_FO_CONFIG_PROP_KEY_, normalizedRaw);
+    }
+    return normalized;
   } catch (e) {
     return null;
   }
@@ -182,15 +200,7 @@ function mostrarConfiguracionFO_() {
 function guardarConfiguracionFO_(payload) {
   try {
     const defaults = _defaultConfigEvaluacion_();
-    const cfg = {
-      alfa: _numOrDefault_(payload && payload.alfa, defaults.alfa),
-      cv_ideal: _numOrDefault_(payload && payload.cv_ideal, defaults.cv_ideal),
-      ventana_ideal: _numOrDefault_(payload && payload.ventana_ideal, defaults.ventana_ideal),
-      resolver_segmentacion: _bool01OrDefault_(payload && payload.resolver_segmentacion, defaults.resolver_segmentacion),
-      hoja_malla: _textOrDefault_(payload && payload.hoja_malla, defaults.hoja_malla),
-      hoja_horarios: _textOrDefault_(payload && payload.hoja_horarios, defaults.hoja_horarios),
-      hoja_matriculas: _textOrDefault_(payload && payload.hoja_matriculas, defaults.hoja_matriculas)
-    };
+    const cfg = _normalizarConfigEvaluacion_(payload, defaults);
     _setUIConfigOverride_(cfg);
     console.log("Configuración FO guardada (UI override)", cfg);
     return { ok: true, savedAt: new Date().toISOString(), cfg: cfg };
@@ -216,9 +226,9 @@ function restaurarConfiguracionFO_() {
  * - I3: ALFA
  * - I4: CV ideal
  * - I5: Ventana ideal (también es el umbral de penalización cuadrática)
- * - I7: Nombre hoja malla
- * - I8: Nombre hoja horarios
- * - I9: Nombre hoja matrículas
+ * - I7: Nombre hoja horarios
+ * - I8: Nombre hoja matrículas
+ * - I9: Resolver segmentación de estudiantes
  */
 function _leerConfigEvaluacion_(ss) {
   const defaults = _defaultConfigEvaluacion_();
@@ -226,15 +236,7 @@ function _leerConfigEvaluacion_(ss) {
   // 0) Si hay override por UI, tiene prioridad y no requiere hoja.
   const uiCfg = _getUIConfigOverride_();
   if (uiCfg) {
-    return {
-      alfa: _numOrDefault_(uiCfg.alfa, defaults.alfa),
-      cv_ideal: _numOrDefault_(uiCfg.cv_ideal, defaults.cv_ideal),
-      ventana_ideal: _numOrDefault_(uiCfg.ventana_ideal, defaults.ventana_ideal),
-      resolver_segmentacion: _bool01OrDefault_(uiCfg.resolver_segmentacion, defaults.resolver_segmentacion),
-      hoja_malla: _textOrDefault_(uiCfg.hoja_malla, defaults.hoja_malla),
-      hoja_horarios: _textOrDefault_(uiCfg.hoja_horarios, defaults.hoja_horarios),
-      hoja_matriculas: _textOrDefault_(uiCfg.hoja_matriculas, defaults.hoja_matriculas)
-    };
+    return _normalizarConfigEvaluacion_(uiCfg, defaults);
   }
 
   const sh = ss.getSheetByName("Evaluación de FO");
@@ -243,9 +245,11 @@ function _leerConfigEvaluacion_(ss) {
   const getI = (row) => sh.getRange(row, 9).getValue(); // Columna I
   const getA1 = (a1) => sh.getRange(a1).getValue();
 
-  // Compatibilidad: el valor puede estar en I10 (convención H/I)
-  // o en H11 (según layout personalizado del usuario).
+  // Compatibilidad: el valor principal ahora está en I9.
+  // Se conservan ubicaciones antiguas por si existe una hoja previa.
   const rawResolver = (() => {
+    const vI9 = getI(9);
+    if (String(vI9 || "").trim() !== "") return vI9;
     const vI10 = getI(10);
     if (String(vI10 || "").trim() !== "") return vI10;
     const vH11 = getA1("H11");
@@ -260,9 +264,8 @@ function _leerConfigEvaluacion_(ss) {
     cv_ideal: _numOrDefault_(getI(4), defaults.cv_ideal),
     ventana_ideal: _numOrDefault_(getI(5), defaults.ventana_ideal),
     resolver_segmentacion: _bool01OrDefault_(rawResolver, defaults.resolver_segmentacion),
-    hoja_malla: _textOrDefault_(getI(7), defaults.hoja_malla),
-    hoja_horarios: _textOrDefault_(getI(8), defaults.hoja_horarios),
-    hoja_matriculas: _textOrDefault_(getI(9), defaults.hoja_matriculas)
+    hoja_horarios: _textOrDefault_(getI(7), defaults.hoja_horarios),
+    hoja_matriculas: _textOrDefault_(getI(8), defaults.hoja_matriculas)
   };
 }
 
@@ -291,7 +294,7 @@ function _bool01OrDefault_(value, def) {
  * Sección esperada:
  * - H1:I2 (combinado): "Parámetros para Ejecutar Evaluación"
  * - H3/H4/H5: ALFA, CV IDEAL, VENTANA IDEAL
- * - H7/H8/H9: HOJA MALLA, HOJA HORARIOS, HOJA MATRÍCULAS
+ * - H7/H8/H9: HOJA HORARIOS, HOJA MATRÍCULAS, RESOLVER SEGMENTACIÓN DE ESTUDIANTES
  * - I3/I4/I5/I7/I8/I9: valores
  */
 function _asegurarPlantillaConfigEvaluacion_(ss, config) {
@@ -315,11 +318,10 @@ function _asegurarPlantillaConfigEvaluacion_(ss, config) {
     { labelCell: "H3", label: "ALFA", valueCell: "I3", def: config.alfa },
     { labelCell: "H4", label: "CV IDEAL", valueCell: "I4", def: config.cv_ideal },
     { labelCell: "H5", label: "VENTANA IDEAL", valueCell: "I5", def: config.ventana_ideal },
-    { labelCell: "H7", label: "HOJA MALLA", valueCell: "I7", def: config.hoja_malla },
-    { labelCell: "H8", label: "HOJA HORARIOS", valueCell: "I8", def: config.hoja_horarios },
-    { labelCell: "H9", label: "HOJA MATRÍCULAS", valueCell: "I9", def: config.hoja_matriculas },
+    { labelCell: "H7", label: "HOJA HORARIOS", valueCell: "I7", def: config.hoja_horarios },
+    { labelCell: "H8", label: "HOJA MATRÍCULAS", valueCell: "I8", def: config.hoja_matriculas },
     // Flag: 0 = usar paralelos desde matrícula, 1 = resolver segmentación
-    { labelCell: "H10", label: "RESOLVER SEGMENTACIÓN DE ESTUDIANTES", valueCell: "I10", def: config.resolver_segmentacion }
+    { labelCell: "H9", label: "RESOLVER SEGMENTACIÓN DE ESTUDIANTES", valueCell: "I9", def: config.resolver_segmentacion }
   ];
 
   for (const it of items) {
@@ -429,6 +431,64 @@ function _obtenerBloquesDeParalelo(datosHorario, curso, numParalelo) {
   return Array.from(bloquesSet).sort((a, b) => a - b);
 }
 
+function _construirCatalogoDesdeHorario_(datosHorario) {
+  const listaAsignaturas = [];
+  const listaParalelos = [];
+  const bloquesPorParalelo = {};
+  const ocupacionActual = {};
+
+  const asignaturasSet = {};
+  const paralelosSet = {};
+  const bloquesPorParaleloSet = {};
+
+  for (let i = 1; i < (datosHorario || []).length; i++) {
+    const fila = datosHorario[i] || [];
+    const dia = _normalizarDiaClaveADia_(fila[0]);
+    const bloqueTexto = fila[1];
+    const diaIdx = DIAS_INDICE[dia];
+    const bloqueIdx = BLOQUES_INDICE[bloqueTexto];
+
+    if (diaIdx == null || bloqueIdx == null) continue;
+
+    const idBloque = (diaIdx * BLOQUES_POR_DIA) + bloqueIdx;
+
+    // Los bloques de cursos empiezan en la columna D (índice 3) y se repiten cada 5 columnas.
+    for (let c = 2; c < fila.length; c += 5) {
+      const idParalelo = _normalizarMateriaAParalelo_(fila[c]);
+      if (!idParalelo) continue;
+
+      const curso = _cursoDesdeParalelo(idParalelo);
+      if (!curso) continue;
+
+      if (!asignaturasSet[curso]) {
+        asignaturasSet[curso] = true;
+        listaAsignaturas.push(curso);
+      }
+
+      if (!paralelosSet[idParalelo]) {
+        paralelosSet[idParalelo] = true;
+        listaParalelos.push(idParalelo);
+        ocupacionActual[idParalelo] = 0;
+        bloquesPorParaleloSet[idParalelo] = new Set();
+      }
+
+      bloquesPorParaleloSet[idParalelo].add(idBloque);
+    }
+  }
+
+  for (let i = 0; i < listaParalelos.length; i++) {
+    const idParalelo = listaParalelos[i];
+    bloquesPorParalelo[idParalelo] = Array.from(bloquesPorParaleloSet[idParalelo] || []).sort((a, b) => a - b);
+  }
+
+  return {
+    listaAsignaturas,
+    listaParalelos,
+    bloquesPorParalelo,
+    ocupacionActual
+  };
+}
+
 function _normalizarDiaClaveADia_(dia) {
   const raw = String(dia == null ? "" : dia).trim();
   if (raw.trim().length >= 3){
@@ -466,13 +526,21 @@ function _normalizarMateriaAParalelo_(materia) {
   const raw = String(materia == null ? "" : materia).trim();
   if (!raw) return "";
 
+
+
+  // Si no es un curso
+  if (raw.length <= 6) return null;
+  if (raw === "CLAVE PROTEGIDA") return null;
+
   // Esperables: "CURSO-01", no convencional: "CURSO01", "CURSO-1"
   if (!raw.includes("-")) {
-    if (raw.length < 3) return raw;
     return `${raw.slice(0, -2)}-${raw.slice(-2)}`;
   }
 
-  const parts = raw.split("-");
+  let parts = raw.split("-");
+  if (parts.length > 2){
+    parts = [parts.slice(0, -1).flat().join('-'), parts.at(-1)];
+  }
   const curso = String(parts[0] || "").trim();
   const p = String(parts[1] || "").trim();
   if (!curso) return raw;
@@ -750,51 +818,20 @@ function evaluarFuncionObjetivo() {
   const RESOLVER_SEGMENTACION = config.resolver_segmentacion;
 
   // 1. Carga de Datos (nombres de hojas configurables)
-  const hojaMallas = ss.getSheetByName(config.hoja_malla);
   const hojaHorarios = ss.getSheetByName(config.hoja_horarios);
   const hojaMatriculas = ss.getSheetByName(config.hoja_matriculas);
-  if (!hojaMallas) throw new Error(`No se encontró la hoja de malla: '${config.hoja_malla}' (config en Evaluación de FO!I7)`);
   if (!hojaHorarios) throw new Error(`No se encontró la hoja de horarios: '${config.hoja_horarios}' (config en Evaluación de FO!I8)`);
   if (!hojaMatriculas) throw new Error(`No se encontró la hoja de matrículas: '${config.hoja_matriculas}' (config en Evaluación de FO!I9)`);
 
-  const datosMallas = hojaMallas.getDataRange().getValues();
   const datosHorarios = hojaHorarios.getDataRange().getValues();
   const datosEstudiantes = hojaMatriculas.getDataRange().getValues();
 
-  const listaAsignaturas = [];
-  const listaParalelos = [];
-  const bloquesPorParalelo = {};
-  const ocupacionActual = {};
-  const asignaturasSet = {};
-
-  // 2. Procesamiento de Mallas (Asignaturas y Paralelos)
-  for (let i = 1; i < datosMallas.length; i++) {
-    const curso = _normalizarMateriaACurso_(datosMallas[i][0]);
-    let asignaturaRegistrada = false;
-    let numParalelo = 1;
-
-    while (true) {
-      const bloques = _obtenerBloquesDeParalelo(datosHorarios, curso, numParalelo);
-      
-      // Rompe el ciclo si ya no encuentra más paralelos para este curso
-      if (bloques.length === 0) break;
-
-      if (!asignaturaRegistrada) {
-        listaAsignaturas.push(curso);
-        asignaturasSet[curso] = true;
-        asignaturaRegistrada = true;
-      }
-
-      // Formato: "CURSO-01"
-      const idParalelo = `${curso}-${String(numParalelo).padStart(2, '0')}`;
-      
-      bloquesPorParalelo[idParalelo] = bloques;
-      listaParalelos.push(idParalelo);
-      ocupacionActual[idParalelo] = 0; // Inicializar contador de ocupación
-      
-      numParalelo++;
-    }
-  }
+  // 2. Procesamiento del horario: catálogo real de asignaturas y paralelos efectivamente programados.
+  const catalogoHorario = _construirCatalogoDesdeHorario_(datosHorarios);
+  const listaAsignaturas = catalogoHorario.listaAsignaturas;
+  const listaParalelos = catalogoHorario.listaParalelos;
+  const bloquesPorParalelo = catalogoHorario.bloquesPorParalelo;
+  const ocupacionActual = catalogoHorario.ocupacionActual;
 
   const corridaOptimizada = _ejecutarCorridaEvaluacion_({
     listaAsignaturas,
