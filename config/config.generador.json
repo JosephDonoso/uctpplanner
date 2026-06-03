@@ -37,18 +37,24 @@
     "media_paralelos_por_maestro": 2.3,
     "prob_disponibilidad_maestro_bloque": 0.7,
     "estudiantes": 1200,
-    "sesiones_max_por_estudiante": 7,
-    "sesiones_min_por_estudiante": 0,
-    "media_sesiones_por_estudiante": 3.2,
-    "cursos": 15,
-    "prob_relacion_asignatura_curso": 0.88,
+    "asignaturas_max_por_estudiante": 7,
+    "asignaturas_min_por_estudiante": 0,
+    "media_asignaturas_por_estudiante": 3.2,
+    "carreras": 3,
+    "semestre_min_por_carrera": 8,
+    "semestre_max_por_carrera": 12,
+    "media_semestres_por_carrera": 9.5,
+    "prob_curso_base_para_estudiante": 0.88,
+    "prob_asignatura_sin_curso": 0.1,
     "prob_asignaturas_preasignadas": 0.01,
-    "prob_un_maestro_por_paralelo_compartido": 0.7
+    "prob_un_maestro_por_paralelo_compartido": 0.7,
+    "max_maestros_por_asignatura": 2
   },
   "nombres": {
     "prefijo_asignatura": "ASG",
     "prefijo_maestro": "DOC",
-    "prefijo_estudiante": "EST"
+    "prefijo_estudiante": "EST",
+    "prefijo_carrera": "CAR"
   },
   "tipos_clases": [
     {

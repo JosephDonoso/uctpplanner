@@ -202,8 +202,28 @@ def _generar_clases_base_asignatura(
     return clases
 
 
-def _construir_catalogo_cursos(cantidad_cursos: int) -> List[Dict[str, str]]:
-    return [{"carrera": f"CUR{idx:02d}", "semestre": "01"} for idx in range(1, cantidad_cursos + 1)]
+def _construir_catalogo_carreras(
+    cantidad_carreras: int,
+    minimo_semestres: int,
+    maximo_semestres: int,
+    media_semestres: float,
+    prefijo_carrera: str,
+    rng: random.Random,
+) -> List[Dict[str, Any]]:
+    semestres_por_carrera = _distribuir_enteros(cantidad_carreras, minimo_semestres, maximo_semestres, media_semestres, rng)
+    catalogo: List[Dict[str, Any]] = []
+    for idx, cantidad_semestres in enumerate(semestres_por_carrera, start=1):
+        carrera = _codigo_seq(prefijo_carrera, idx)
+        catalogo.append(
+            {
+                "carrera": carrera,
+                "semestres": [
+                    {"carrera": carrera, "semestre": f"{idx_sem:02d}"}
+                    for idx_sem in range(1, cantidad_semestres + 1)
+                ],
+            }
+        )
+    return catalogo
 
 
 def _repartir_asignaturas_en_cursos(cantidad_asignaturas: int, cantidad_cursos: int, rng: random.Random) -> List[int]:
@@ -321,6 +341,42 @@ def _elegir_bloque(
     return maestro, dia, bloque
 
 
+def _feasible_blocks_for_teachers(
+    dias: Sequence[str],
+    bloques: Sequence[str],
+    maestros: Sequence[str],
+    disponibilidad_maestros: Dict[str, Dict[str, List[int]]],
+    ocupacion_maestros: Dict[str, set],
+    ocupacion_paralelo: set,
+    dias_protegidos: set,
+    restriccion: str,
+) -> List[Tuple[str, str]]:
+    if not maestros:
+        return []
+
+    comunes: Optional[set] = None
+    for maestro in maestros:
+        opciones_maestro = _feasible_blocks_for_teacher(
+            dias=dias,
+            bloques=bloques,
+            maestros=[maestro],
+            disponibilidad_maestros=disponibilidad_maestros,
+            ocupacion_maestros=ocupacion_maestros,
+            ocupacion_paralelo=ocupacion_paralelo,
+            dias_protegidos=dias_protegidos,
+            restriccion=restriccion,
+        ).get(maestro, [])
+        opciones_set = set(opciones_maestro)
+        if comunes is None:
+            comunes = opciones_set
+        else:
+            comunes &= opciones_set
+        if not comunes:
+            return []
+
+    return list(comunes or [])
+
+
 def _preasignar_paralelo(
     paralelo: Dict[str, Any],
     dias: Sequence[str],
@@ -374,6 +430,31 @@ def _preasignar_paralelo(
             clase["maestros"] = None
             clase["horario_predefinido"] = {"dia": dia, "bloque": bloque}
             ocupacion_paralelo.add((dia, bloque))
+            asignaciones.append((clase, (dia, bloque)))
+            continue
+
+        if isinstance(maestros_clase, list) and len(candidatos) > 1:
+            opciones_compartidas = _feasible_blocks_for_teachers(
+                dias=dias,
+                bloques=bloques,
+                maestros=candidatos,
+                disponibilidad_maestros=disponibilidad_maestros,
+                ocupacion_maestros=ocupacion_maestros,
+                ocupacion_paralelo=ocupacion_paralelo,
+                dias_protegidos=dias_protegidos,
+                restriccion=paralelo.get("restriccion_teoricas", "none"),
+            )
+            if not opciones_compartidas:
+                for clase_asignada, _ in asignaciones:
+                    clase_asignada.pop("horario_predefinido", None)
+                return False
+
+            dia, bloque = rng.choice(opciones_compartidas)
+            clase["maestros"] = candidatos
+            clase["horario_predefinido"] = {"dia": dia, "bloque": bloque}
+            ocupacion_paralelo.add((dia, bloque))
+            for maestro in candidatos:
+                ocupacion_maestros.setdefault(maestro, set()).add((dia, bloque))
             asignaciones.append((clase, (dia, bloque)))
             continue
 
@@ -443,15 +524,20 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
     prob_disponibilidad_maestro_bloque = _numero(cantidades_cfg, "prob_disponibilidad_maestro_bloque", 0.7)
 
     n_estudiantes = _entero(cantidades_cfg, "estudiantes", 1200)
-    min_sesiones_estudiante = _entero(cantidades_cfg, "sesiones_min_por_estudiante", 0)
-    max_sesiones_estudiante = _entero(cantidades_cfg, "sesiones_max_por_estudiante", 7)
-    media_sesiones_estudiante = _numero(cantidades_cfg, "media_sesiones_por_estudiante", 3.2)
+    min_sesiones_estudiante = _entero(cantidades_cfg, "asignaturas_min_por_estudiante", _entero(cantidades_cfg, "sesiones_min_por_estudiante", 0))
+    max_sesiones_estudiante = _entero(cantidades_cfg, "asignaturas_max_por_estudiante", _entero(cantidades_cfg, "sesiones_max_por_estudiante", 7))
+    media_sesiones_estudiante = _numero(cantidades_cfg, "media_asignaturas_por_estudiante", _numero(cantidades_cfg, "media_sesiones_por_estudiante", 3.2))
 
-    n_cursos = _entero(cantidades_cfg, "cursos", 15)
-    prob_relacion_asignatura_curso = _numero(cantidades_cfg, "prob_relacion_asignatura_curso", 0.88)
+    n_carreras = _entero(cantidades_cfg, "carreras", _entero(cantidades_cfg, "cursos", 15))
+    min_semestres_carrera = _entero(cantidades_cfg, "semestre_min_por_carrera", 8)
+    max_semestres_carrera = _entero(cantidades_cfg, "semestre_max_por_carrera", 12)
+    media_semestres_carrera = _numero(cantidades_cfg, "media_semestres_por_carrera", 9.5)
+    prob_relacion_asignatura_curso = _numero(cantidades_cfg, "prob_curso_base_para_estudiante", 0.88)
+    prob_asignatura_sin_curso = _numero(cantidades_cfg, "prob_asignatura_sin_curso", 0.1)
     prob_asignaturas_preasignadas = _numero(cantidades_cfg, "prob_asignaturas_preasignadas", 0.05)
     prob_asignatura_con_ayudantia = _numero(cantidades_cfg, "prob_asignatura_con_ayudantia", 0.35)
     prob_un_maestro_por_paralelo_compartido = _numero(cantidades_cfg, "prob_un_maestro_por_paralelo_compartido", 0.7)
+    max_maestros_por_asignatura = _entero(cantidades_cfg, "max_maestros_por_asignatura", 2)
 
     prob_restriccion_dias_distintos = _numero(restricciones_cfg, "prob_restriccion_teorica_dias_distintos", 0.0)
     prob_restriccion_1_dia = _numero(restricciones_cfg, "prob_restriccion_teorica_separadas_1_dia", 0.0)
@@ -459,10 +545,26 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
     prefijo_asignatura = _escalar_texto(nombres_cfg.get("prefijo_asignatura"), "ASG")
     prefijo_maestro = _escalar_texto(nombres_cfg.get("prefijo_maestro"), "DOC")
     prefijo_estudiante = _escalar_texto(nombres_cfg.get("prefijo_estudiante"), "EST")
+    prefijo_carrera = _escalar_texto(nombres_cfg.get("prefijo_carrera"), "CAR")
 
     tipos_clase = _cargar_tipos_clase(config)
-    cursos_catalogo = _construir_catalogo_cursos(n_cursos)
-    curso_por_asignatura = _repartir_asignaturas_en_cursos(n_asignaturas, n_cursos, rng)
+    carreras_catalogo = _construir_catalogo_carreras(
+        n_carreras,
+        min_semestres_carrera,
+        max_semestres_carrera,
+        media_semestres_carrera,
+        prefijo_carrera,
+        rng,
+    )
+    cursos_catalogo = [curso for carrera in carreras_catalogo for curso in carrera["semestres"]]
+    asignaturas_con_curso = [idx for idx in range(n_asignaturas) if rng.random() >= prob_asignatura_sin_curso]
+    if not asignaturas_con_curso and n_asignaturas > 0:
+        asignaturas_con_curso = [rng.randrange(n_asignaturas)]
+    curso_por_asignatura: Dict[int, int] = {}
+    if cursos_catalogo and asignaturas_con_curso:
+        cursos_por_asignatura = _repartir_asignaturas_en_cursos(len(asignaturas_con_curso), len(cursos_catalogo), rng)
+        for idx_asignatura, idx_curso in zip(asignaturas_con_curso, cursos_por_asignatura):
+            curso_por_asignatura[idx_asignatura] = idx_curso
     paralelos_por_asignatura = _distribuir_enteros(n_asignaturas, min_paralelos, max_paralelos, media_paralelos, rng)
     sesiones_por_asignatura = _distribuir_enteros(n_asignaturas, min_sesiones, max_sesiones, media_sesiones, rng)
 
@@ -486,7 +588,7 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
 
     for idx_a in range(n_asignaturas):
         codigo_asignatura = _codigo_seq(prefijo_asignatura, idx_a + 1)
-        curso = cursos_catalogo[curso_por_asignatura[idx_a]]
+        curso = cursos_catalogo[curso_por_asignatura[idx_a]] if idx_a in curso_por_asignatura else None
         clases_base = _generar_clases_base_asignatura(
             sesiones_por_asignatura[idx_a],
             tipos_clase,
@@ -534,14 +636,11 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
     # Segundo pase: agregar maestros extra para compartir paralelos.
     extra_restantes = objetivo_asignaciones_maestro - total_paralelos
     while extra_restantes > 0:
-        candidatos_paralelo = [entry for entry in paralelos_flat if len(entry["paralelo"]["maestros"]) < min(4, len(maestros))]
+        candidatos_paralelo = [entry for entry in paralelos_flat if len(entry["paralelo"]["maestros"]) < min(max_maestros_por_asignatura, len(maestros))]
         if not candidatos_paralelo:
             break
         rng.shuffle(candidatos_paralelo)
-        if rng.random() < prob_un_maestro_por_paralelo_compartido:
-            candidatos_paralelo.sort(key=lambda entry: (len(entry["paralelo"]["maestros"]), entry["codigo_asignatura"], entry["indice_paralelo"]))
-        else:
-            candidatos_paralelo.sort(key=lambda entry: (entry["codigo_asignatura"], entry["indice_paralelo"]))
+        candidatos_paralelo.sort(key=lambda entry: (len(entry["paralelo"]["maestros"]), entry["codigo_asignatura"], entry["indice_paralelo"]))
         entrada = candidatos_paralelo[0]
         paralelo = entrada["paralelo"]
         candidatos_maestro = [maestro["nombre"] for maestro in maestros if maestro["nombre"] not in paralelo["maestros"] and carga_por_maestro[maestro["nombre"]] < max_paralelos_maestro]
@@ -578,6 +677,7 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
     for entry in paralelos_flat:
         paralelo = entry["paralelo"]
         maestros_paralelo = list(paralelo["maestros"])
+        es_compartido = len(maestros_paralelo) > 1 and rng.random() < prob_un_maestro_por_paralelo_compartido
         carga_clases_por_maestro = {maestro: 0 for maestro in maestros_paralelo}
         clases = paralelo.get("clases", [])
         for clase in clases:
@@ -590,6 +690,10 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
 
             if not maestros_paralelo:
                 clase["maestros"] = None if tipo == "Ay." else []
+                continue
+
+            if es_compartido:
+                clase["maestros"] = list(maestros_paralelo)
                 continue
 
             maestro_clase = min(
@@ -633,24 +737,25 @@ def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
 
     # Estudiantes.
     sesiones_por_estudiante = _distribuir_enteros(n_estudiantes, min_sesiones_estudiante, max_sesiones_estudiante, media_sesiones_estudiante, rng)
-    curso_a_asignaturas: Dict[int, List[int]] = {idx: [] for idx in range(n_cursos)}
-    for idx_a, curso_idx in enumerate(curso_por_asignatura):
+    curso_a_asignaturas: Dict[int, List[int]] = {idx: [] for idx in range(len(cursos_catalogo))}
+    for idx_a, curso_idx in curso_por_asignatura.items():
         curso_a_asignaturas[curso_idx].append(idx_a)
     cursos_con_ramos = [idx for idx, lista in curso_a_asignaturas.items() if lista]
     if not cursos_con_ramos:
-        cursos_con_ramos = list(range(n_cursos))
+        cursos_con_ramos = list(range(len(cursos_catalogo)))
 
     estudiantes: List[Dict[str, Any]] = []
     for idx_e in range(n_estudiantes):
         cantidad = sesiones_por_estudiante[idx_e]
-        curso_base = rng.choice(cursos_con_ramos)
+        curso_base = rng.choice(cursos_con_ramos) if cursos_con_ramos else None
         materias: List[Dict[str, str]] = []
         elegidas: set = set()
         for _ in range(cantidad):
-            if rng.random() < prob_relacion_asignatura_curso:
+            if curso_base is not None and rng.random() < prob_relacion_asignatura_curso:
                 pool = [idx for idx in curso_a_asignaturas.get(curso_base, []) if idx not in elegidas]
             else:
-                pool = [idx for idx in range(len(asignaturas)) if idx not in elegidas and idx not in curso_a_asignaturas.get(curso_base, [])]
+                pool_base = curso_a_asignaturas.get(curso_base, []) if curso_base is not None else []
+                pool = [idx for idx in range(len(asignaturas)) if idx not in elegidas and idx not in pool_base]
             if not pool:
                 pool = [idx for idx in range(len(asignaturas)) if idx not in elegidas]
             if not pool:

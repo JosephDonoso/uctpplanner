@@ -53,7 +53,7 @@ Complementa a `scripts/generador_instancias.py` la herramienta visual `instancia
 Ejemplo de uso:
 
 ```powershell
-python scripts/generador_instancias.py --config config/config.generador.json
+python scripts/generador_instancias.py --config config/config.generador.json --output ../data/input/test.json
 ```
 
 Si no pasas `--output`, el generador escribe el archivo en `data/input/`.
