@@ -64,6 +64,7 @@ El archivo `config.modelo.json` separa los valores modificables por sección:
   - `ruta_json`: archivo exportado final. Si se deja `null`, la salida por defecto será `<json_origen>.generado.json`.
   - `ruta_graficos`: archivo donde se guarda la figura de evolución de métricas.
   - `ruta_resultados`: archivo donde se van acumulando los tuplos de resultados del flujo.
+  - `ruta_warnings`: archivo donde se exportan las advertencias de reintentos de asignación del componente `Greedy`.
   - `guardar_graficos`: activa o desactiva el guardado del gráfico final.
   - `guardar_resultados`: activa o desactiva el guardado en `ruta_resultados`.
 - `ejecucion`
@@ -71,7 +72,7 @@ El archivo `config.modelo.json` separa los valores modificables por sección:
 
 ## Warnings
 
-- Los detalles internos de reintento de `Greedy` se escriben en `warnings_logs.txt`.
+- Los detalles internos de reintento de `Greedy` se escriben por defecto en `data\output\warnings_logs.txt`.
 - En consola solo queda el aviso de reintento y el mensaje cuando se alcanza el límite.
 
 ## Ejemplo de uso recomendado

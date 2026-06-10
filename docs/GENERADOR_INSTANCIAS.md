@@ -9,10 +9,8 @@ Genera un JSON de instancia compatible con el cargador del proyecto y con el for
 Ejecutar desde la raíz del proyecto:
 
 ```bash
-python scripts/generador_instancias.py --config ruta/al/config.json --output ruta/de/salida.json
+python scripts/generador_instancias.py --config config/config.generador.json --output ../data/input/test.json
 ```
-
-`--config` es obligatorio. `--output` es opcional; si no se indica, el archivo se escribe junto al config como `instancia_generada.json`.
 
 ## Estructura del config
 

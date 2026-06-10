@@ -750,6 +750,7 @@ class Greedy:
     umbral_compatibilidad_intercurso=0.25,
     asignacion_inteligente=True,
     max_reintentos=100,
+    salida_warnings='data/output/warnings_logs.txt'
   ) -> None:
     self.modelo = modelo
     self.umbral_varianza_aceptable = umbral_varianza_aceptable
@@ -757,6 +758,7 @@ class Greedy:
     self.asignacion_inteligente = asignacion_inteligente
     self.max_reintentos = max(1, int(max_reintentos))
     self._reintentos_actuales = 0
+    self.salida_warnings = salida_warnings
 
     self.asignaturas_asignadas: Dict[int, bool] = {}
     self.asignaturas_por_curso: Dict[int, List[int]] = self._construir_asignaturas_por_curso()
@@ -1140,7 +1142,7 @@ class Greedy:
     _registrar_warning_log(
       f"[GREEDY_REINTENTO] Clase {clase} no pudo asignarse. "
       f"Intentos={contador}, bloques_revisados={revisados}/{self.modelo.B}, "
-      f"maestros={nombres_maestros}"
+      f"maestros={nombres_maestros}", self.salida_warnings
     )
 
     claves_orden = ['HC_8', 'RESTR_COMPAT', 'RESTR_TEO', 'HC_1', 'HC_2', 'HC_3', 'HC_4', 'HC_6']
@@ -1148,7 +1150,7 @@ class Greedy:
       if contadores.get(k, 0) <= 0:
         continue
       msg = ejemplos.get(k, 'sin detalle adicional')
-      _registrar_warning_log(f"  - [{k}] bloqueado en {contadores[k]} bloques. Ejemplo: {msg}")
+      _registrar_warning_log(f"  - [{k}] bloqueado en {contadores[k]} bloques. Ejemplo: {msg}", self.salida_warnings)
 
   def _siguiente_bloque_no_revisado(
     self,

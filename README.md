@@ -33,7 +33,8 @@ Planificador académico para construir y optimizar horarios tipo UCTP desde un J
 Desde la raíz del proyecto:
 
 ```powershell
-(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& "c:\Users\Joseph Donoso\Desktop\MEJORA\.venv\Scripts\Activate.ps1")
+(Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned) ; (& "<project_root>\.venv\Scripts\Activate.ps1")
+cd <project_root>
 python UCTPPlanner.py --config config/config.modelo.json
 ```
 
@@ -64,7 +65,6 @@ En la carpeta `appscript/` hay un conjunto de scripts de Google Apps Script que 
 
 - Archivos `.gs`: implementan funciones para crear hojas derivadas del JSON (`-HorarioMaestro`, `-HorarioDocente`, `-Alumnos`, etc.), menús `onOpen` y la evaluación de la función objetivo (`evaluar_fo`).
 - Archivos `.html`: `Upload.html` proporciona una interfaz para subir archivos JSON desde la PC hacia la hoja; `ConfiguracionFO.html` permite ajustar parámetros de evaluación desde la hoja.
-- `appscript/README.md` contiene instrucciones de despliegue y sincronización con `clasp`.
 
 Uso rápido:
 - Abrir la Spreadsheet → `Extensiones` → `Apps Script` y pegar los archivos.

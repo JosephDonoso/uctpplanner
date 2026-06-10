@@ -63,6 +63,7 @@ def main(configuracion: Optional[Dict[str, Any]] = None):
     umbral_compatibilidad_intercurso=float(greedy_cfg.get('umbral_compatibilidad_intercurso', 0.25)),
     asignacion_inteligente=bool(greedy_cfg.get('asignacion_inteligente', True)),
     max_reintentos=int(greedy_cfg.get('max_reintentos', 100)),
+    salida_warnings=str(salida_cfg.get('ruta_warnings', 'data/output/warnings_logs.txt'))
   )
   ssp = SSP(
     modelo,

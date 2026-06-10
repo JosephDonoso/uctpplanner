@@ -88,6 +88,7 @@ def configuracion_por_defecto() -> Dict[str, Any]:
       "ruta_json": None,
       "ruta_graficos": "data/output/graficos_optimizacion.png",
       "ruta_resultados": "data/output/results.txt",
+      "ruta_warnings": "data/output/warnings_logs.txt",
       "guardar_graficos": True,
       "guardar_resultados": True,
     },
@@ -107,7 +108,7 @@ def ruta_json_salida_por_defecto(ruta_entrada_json: str) -> str:
   return f"{ruta_entrada_json}.generado.json"
 
 
-def registrar_warning_log(mensaje: str, ruta_log: str = 'warnings_logs.txt') -> None:
+def registrar_warning_log(mensaje: str, ruta_log: str = 'data/output/warnings_logs.txt') -> None:
   """Agrega un warning al archivo de logs sin interrumpir el flujo."""
   try:
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')

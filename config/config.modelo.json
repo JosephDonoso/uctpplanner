@@ -31,6 +31,7 @@
     "ruta_json": null,
     "ruta_graficos": "data/output/graficos_optimizacion.png",
     "ruta_resultados": "data/output/results.txt",
+    "ruta_warnings": "data/output/warnings_logs.txt",
     "guardar_graficos": true,
     "guardar_resultados": true
   },
