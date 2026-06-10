@@ -500,13 +500,15 @@
         </div>
 
         <div class="field">
-          <label>Restricciones nuevas</label>
-          <div class="muted">Cada paralelo de una asignatura puede marcar cómo deben ordenarse sus clases teóricas. Cada profesor puede activar o desactivar el respeto a su carga diaria y semanal.</div>
+          <label>Institucion</label>
+          <input id="institution" readonly />
         </div>
 
         <div class="field">
-          <label>Institucion</label>
-          <input id="institution" readonly />
+          <label for="studentsFile">Cargar estudiantes</label>
+          <div class="muted">Carga un archivo CSV con la lista de estudiantes y sus asignaturas/paralelos en formato id;ASG001-01,ASG002-01 o id;ASG001,ASG002 (si no incluye paralelo se asume "01").</div>
+          <input id="studentsFile" type="file" accept="text/csv,.csv" />
+          <div id="fileState" class="muted">Sin archivo cargado.</div>
         </div>
 
         <div class="pills">
@@ -593,6 +595,7 @@
 
     const els = {
       jsonFile: document.getElementById('jsonFile'),
+      studentsFile: document.getElementById('studentsFile'),
       outputName: document.getElementById('outputName'),
       semester: document.getElementById('semester'),
       description: document.getElementById('description'),
@@ -1878,6 +1881,61 @@
     els.jsonFile.addEventListener('change', (event) => {
       const file = event.target.files?.[0];
       if (file) loadFile(file);
+    });
+
+    // Permitir cargar estudiantes desde un CSV separado, sin afectar el resto de la data
+    // El formato esperado de entrada es un CSV con la estructura:
+    // EST1199;ASG028-01,ASG005-01,ASG042-01 o EST1199;ASG028,ASG005,ASG042
+    // Formato salida en el json (si no incluye paralelo se asume "01"):
+    /*
+    {
+        "id": "EST1199",
+        "asignaturas": [
+          {
+            "codigo": "ASG028",
+            "paralelo": "01"
+          },
+          {
+            "codigo": "ASG005",
+            "paralelo": "01"
+          },
+          {
+            "codigo": "ASG042",
+            "paralelo": "01"
+          }
+        ]
+      },
+    */
+    els.studentsFile.addEventListener('change', (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result || '');
+          const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+          const estudiantes = lines.map((line, index) => {
+            const parts = line.split(';').map((part) => part.trim());
+            if (parts.length !== 2) {
+              throw new Error(`Línea ${index + 1}: formato inválido. Se esperaba "ID_ESTUDIANTE;ASIGNATURA1-ASG028-01,ASIGNATURA2-ASG005-01,...".`);
+            }
+            const id = parts[0];
+            const asignaturas = parts[1].split(',').map((asigPart) => {
+              const [codigo, paralelo] = asigPart.split('-').map((p) => p.trim());
+              return { codigo, paralelo: paralelo || '01' };
+            });
+            return { id, asignaturas };
+          });
+
+          state.data.recursos.estudiantes = estudiantes;
+          renderPreviewData();
+          showStatus('Estudiantes cargados desde CSV.', true);
+        } catch (error) {
+          showStatus(error.message || String(error), false);
+        }
+      };
+      reader.readAsText(file, 'utf-8');
     });
 
     els.newSubject.addEventListener('click', () => {
