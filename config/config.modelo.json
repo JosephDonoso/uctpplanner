@@ -22,8 +22,10 @@
     "max_iteraciones_sin_mejora": 50,
     "tamano_lista_tabu": 25,
     "tamano_vecindario": 50,
-    "resolver_ssp": true
-  },
+    "resolver_ssp": true,
+    "busqueda_guiada": false,
+    "proporcion_guiada": 0.7
+   },
   "flujo": {
     "max_iteraciones": 1
   },

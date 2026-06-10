@@ -79,6 +79,8 @@ def main(configuracion: Optional[Dict[str, Any]] = None):
     tamaño_lista_tabu=int(uctp_cfg.get('tamaño_lista_tabu', uctp_cfg.get('tamano_lista_tabu', 20))),
     tamaño_vecindario=int(uctp_cfg.get('tamaño_vecindario', uctp_cfg.get('tamano_vecindario', 50))),
     resolver_ssp=bool(uctp_cfg.get('resolver_ssp', True)),
+    busqueda_guiada=bool(uctp_cfg.get('busqueda_guiada', True)),
+    proporcion_guiada=float(uctp_cfg.get('proporcion_guiada', 0.7)),
   )
 
   print("\n--- INICIO DEL FLUJO PRINCIPAL ---")
