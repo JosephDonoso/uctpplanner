@@ -13,7 +13,7 @@
     "max_reintentos": 100
   },
   "ssp": {
-    "alfa": 0.2,
+    "alfa": 1,
     "cv_ideal": 0.1,
     "ventana_ideal": 4
   },
@@ -33,6 +33,7 @@
     "ruta_json": null,
     "ruta_graficos": "data/output/graficos_optimizacion.png",
     "ruta_resultados": "data/output/results.txt",
+    "ruta_valores_graficos": "data/output/valores_graficos_optimizacion.txt",
     "ruta_warnings": "data/output/warnings_logs.txt",
     "guardar_graficos": true,
     "guardar_resultados": true

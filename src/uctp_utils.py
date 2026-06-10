@@ -88,6 +88,7 @@ def configuracion_por_defecto() -> Dict[str, Any]:
       "ruta_json": None,
       "ruta_graficos": "data/output/graficos_optimizacion.png",
       "ruta_resultados": "data/output/results.txt",
+      "ruta_valores_graficos": "data/output/valores_graficos_optimizacion.txt",
       "ruta_warnings": "data/output/warnings_logs.txt",
       "guardar_graficos": True,
       "guardar_resultados": True,
