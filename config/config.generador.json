@@ -1,6 +1,6 @@
 {
   "seed": 42,
-  "output": "data/input/test.json",
+  "output": "../data/input/test.json",
   "metadatos": {
     "institucion": "PUCV - Escuela de Ingeniería en Informática",
     "semestre": "2025-1"
