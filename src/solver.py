@@ -568,7 +568,7 @@ class Modelo:
   # -----------------------------------------------------------
   # FUNCIÓN OBJETIVO
   # -----------------------------------------------------------
-  def calc_fo_new(self, alfa=1, cv_ideal=0.1, ventana_ideal=4):
+  def calc_fo_new(self, alfa=1, cv_ideal=0.1, ventana_ideal=4, calcular_prioridades=False):
     # 1. PRE-CÁLCULO LOCAL: Bloques por paralelo
     # Formato: {(id_asignatura, id_paralelo): [id_bloque1, ...]}
     self.bloques_paralelos = {}
@@ -606,7 +606,6 @@ class Modelo:
 
     suma_desviaciones_reales = 0
     suma_desviaciones_ideales = 0
-    total_inscripciones = 0
 
     for idx_a in range(self.A):
       n_p = self.P[idx_a]
@@ -644,6 +643,13 @@ class Modelo:
     ratio_desbalance_crudo = desbalance_real / max(desbalance_ideal, 1e-6)
     ratio_desbalance_fo = ratio_desbalance_crudo**alfa
     ratio_ventana = ventana_total_real / max(ventana_total_ideal, 1e-6)
+
+    if calcular_prioridades:
+      priority_info = {
+        'imbalance': self._prioridades_imbalance(),
+        'window': self._prioridades_ventana_choques(ventana_ideal),
+      }
+      return (ratio_desbalance_crudo, ratio_ventana, (ratio_desbalance_fo * ratio_ventana), choques, priority_info)
     return (ratio_desbalance_crudo, ratio_ventana, (ratio_desbalance_fo * ratio_ventana), choques)
 
   def calcular_ventana(self, bloques_ocupados, ventana_ideal=4):
@@ -680,6 +686,100 @@ class Modelo:
       return umbral + (sumatoria_ventanas - umbral)**2
 
     return sumatoria_ventanas
+
+  # -----------------------------------------------------------
+  # PRIORIDADES PARA BÚSQUEDA GUIADA
+  # -----------------------------------------------------------
+
+  def _prioridades_imbalance(self):
+    """Retorna [(idx_a, idx_p, desviacion_normalizada)] ordenado por desviación descendente.
+    Mide qué tan lejos está cada paralelo de la media de su asignatura.
+    """
+    prioridades = []
+    for idx_a in range(self.A):
+      n_p = self.P[idx_a]
+      if n_p <= 1:
+        continue
+      inscritos = [self.ocupacion_actual[(idx_a, idx_p)] for idx_p in range(n_p)]
+      media_a = sum(inscritos) / n_p
+      if media_a < 1e-6:
+        continue
+      for idx_p in range(n_p):
+        desviacion = abs(inscritos[idx_p] - media_a) / media_a
+        prioridades.append((idx_a, idx_p, desviacion))
+    prioridades.sort(key=lambda x: x[2], reverse=True)
+    return prioridades
+
+  def _prioridades_ventana_choques(self, ventana_ideal=4):
+    """Retorna [(idx_a, idx_p, blame)] ordenado por blame descendente.
+    Acumula blame sobre los paralelos involucrados en cada ventana/choque
+    durante el recorrido de estudiantes.
+    """
+    from collections import defaultdict
+    blame_acumulado = defaultdict(float)
+
+    for idx_e in range(self.E):
+      if not self.asignaturas_estudiantes[idx_e]:
+        continue
+
+      bloques = self.bloques_estudiantes[idx_e]
+      if not bloques:
+        continue
+
+      # Reverse mapping: bloque -> paralelos para este estudiante
+      bloque_origen = defaultdict(list)
+      for idx_a in self.asignaturas_estudiantes[idx_e]:
+        for idx_p in range(self.P[idx_a]):
+          if self.Y.get((idx_e, idx_a, idx_p), 0) == 1:
+            for b in self.bloques_paralelos[(idx_a, idx_p)]:
+              bloque_origen[b].append((idx_a, idx_p))
+
+      bloques_ordenados = sorted(bloques)
+      dias = {d: [] for d in range(self.D)}
+      for b in bloques_ordenados:
+        dias[b // self.Bd].append((b % self.Bd, b))
+
+      sumatoria_ventanas = 0
+
+      for dia, pos_list in dias.items():
+        if len(pos_list) < 2:
+          continue
+
+        for i in range(len(pos_list) - 1):
+          gap = pos_list[i+1][0] - pos_list[i][0] - 1
+          bloque_a = pos_list[i][1]
+          bloque_b = pos_list[i+1][1]
+
+          if gap < 0:
+            penalty = 7
+          else:
+            penalty = gap
+
+          sumatoria_ventanas += penalty
+
+          paralelos_a = bloque_origen.get(bloque_a, [])
+          paralelos_b = bloque_origen.get(bloque_b, [])
+          total = len(paralelos_a) + len(paralelos_b)
+          if total > 0:
+            por_origen = penalty / total
+            for ap in paralelos_a:
+              blame_acumulado[ap] += por_origen
+            for ap in paralelos_b:
+              blame_acumulado[ap] += por_origen
+
+        if pos_list[0][0] <= 3 and pos_list[-1][0] >= 4:
+          lunch_penalty = 1
+          sumatoria_ventanas += lunch_penalty
+          paralelos_extremos = set(bloque_origen.get(pos_list[0][1], [])) | set(bloque_origen.get(pos_list[-1][1], []))
+          if paralelos_extremos:
+            por_origen = lunch_penalty / len(paralelos_extremos)
+            for ap in paralelos_extremos:
+              blame_acumulado[ap] += por_origen
+
+    return sorted(
+      ((a, p, b) for (a, p), b in blame_acumulado.items()),
+      key=lambda x: x[2], reverse=True
+    )
 
   # -----------------------------------------------------------
   # SETTERS
@@ -1617,13 +1717,12 @@ class SSP:
 
     return sumatoria_ventanas
 
-  def _evaluar_fo(self, alfa=1, cv_ideal=0.1, ventana_ideal=4):
+  def _evaluar_fo(self, alfa=1, cv_ideal=0.1, ventana_ideal=4, calcular_prioridades=False):
     """
     Calcula la función objetivo: (Desbalance/Desbalance_Ideal)^alfa * (Ventana/Ventana_Ideal)
     """
     suma_desviaciones_reales = 0
     suma_desviaciones_ideales = 0
-    total_inscripciones = 0
 
     for idx_a in range(self.modelo.A):
       n_p = self.modelo.P[idx_a]
@@ -1662,7 +1761,87 @@ class SSP:
     ratio_desbalance_crudo = desbalance_real / max(desbalance_ideal, 1e-6)
     ratio_desbalance_fo = ratio_desbalance_crudo**alfa
     ratio_ventana = ventana_total_real / max(ventana_total_ideal, 1e-6)
+
+    if calcular_prioridades:
+      priority_info = {
+        'imbalance': self._prioridades_imbalance(),
+        'window': self._prioridades_ventana_choques(ventana_ideal),
+      }
+      return (ratio_desbalance_crudo, ratio_ventana, (ratio_desbalance_fo * ratio_ventana), choques, priority_info)
     return (ratio_desbalance_crudo, ratio_ventana, (ratio_desbalance_fo * ratio_ventana), choques)
+
+  def _prioridades_imbalance(self):
+    prioridades = []
+    for idx_a in range(self.modelo.A):
+      n_p = self.modelo.P[idx_a]
+      if n_p <= 1:
+        continue
+      inscritos = [self.ocupacion_por_paralelo[(idx_a, idx_p)] for idx_p in range(n_p)]
+      media_a = sum(inscritos) / n_p
+      if media_a < 1e-6:
+        continue
+      for idx_p in range(n_p):
+        desviacion = abs(inscritos[idx_p] - media_a) / media_a
+        prioridades.append((idx_a, idx_p, desviacion))
+    prioridades.sort(key=lambda x: x[2], reverse=True)
+    return prioridades
+
+  def _prioridades_ventana_choques(self, ventana_ideal=4):
+    from collections import defaultdict
+    blame_acumulado = defaultdict(float)
+
+    for idx_e in range(self.modelo.E):
+      if not self.asignaturas_estudiantes[idx_e]:
+        continue
+
+      bloques = self.bloques_por_estudiante[idx_e]
+      if not bloques:
+        continue
+
+      bloque_origen = defaultdict(list)
+      for idx_a in self.asignaturas_estudiantes[idx_e]:
+        for idx_p in range(self.modelo.P[idx_a]):
+          if self.modelo.Y.get((idx_e, idx_a, idx_p), 0) == 1:
+            for b in self.bloques_por_paralelo[(idx_a, idx_p)]:
+              bloque_origen[b].append((idx_a, idx_p))
+
+      bloques_ordenados = sorted(bloques)
+      dias = {d: [] for d in range(self.modelo.D)}
+      for b in bloques_ordenados:
+        dias[b // self.modelo.Bd].append((b % self.modelo.Bd, b))
+
+      for dia, pos_list in dias.items():
+        if len(pos_list) < 2:
+          continue
+
+        for i in range(len(pos_list) - 1):
+          gap = pos_list[i+1][0] - pos_list[i][0] - 1
+          bloque_a = pos_list[i][1]
+          bloque_b = pos_list[i+1][1]
+
+          penalty = 7 if gap < 0 else gap
+
+          paralelos_a = bloque_origen.get(bloque_a, [])
+          paralelos_b = bloque_origen.get(bloque_b, [])
+          total = len(paralelos_a) + len(paralelos_b)
+          if total > 0:
+            por_origen = penalty / total
+            for ap in paralelos_a:
+              blame_acumulado[ap] += por_origen
+            for ap in paralelos_b:
+              blame_acumulado[ap] += por_origen
+
+        if pos_list[0][0] <= 3 and pos_list[-1][0] >= 4:
+          paralelos_extremos = set(bloque_origen.get(pos_list[0][1], [])) | set(bloque_origen.get(pos_list[-1][1], []))
+          if paralelos_extremos:
+            por_origen = 1.0 / len(paralelos_extremos)
+            for ap in paralelos_extremos:
+              blame_acumulado[ap] += por_origen
+
+    return sorted(
+      ((a, p, b) for (a, p), b in blame_acumulado.items()),
+      key=lambda x: x[2], reverse=True
+    )
 
 class Nodo:
   """Nodo de Tabu Search.
@@ -1696,27 +1875,33 @@ class UCTP:
                max_iteraciones_sin_mejora = 25,
                tamaño_lista_tabu = 20,
                tamaño_vecindario = 50,
-               resolver_ssp: bool = True) -> None:
+               resolver_ssp: bool = True,
+               busqueda_guiada: bool = True,
+               proporcion_guiada: float = 0.7) -> None:
     self.modelo = modelo
     self.ssp = ssp
     self.lista_tabu = []
     self.max_iteraciones = max_iteraciones
-    self.max_iteraciones_sin_mejora = max_iteraciones_sin_mejora # Guardar parámetro
+    self.max_iteraciones_sin_mejora = max_iteraciones_sin_mejora
     self.tamaño_lista_tabu = tamaño_lista_tabu
     self.tamaño_vecindario = tamaño_vecindario
     self.resolver_ssp = bool(resolver_ssp)
+    self.busqueda_guiada = bool(busqueda_guiada)
+    self.proporcion_guiada = max(0.0, min(1.0, float(proporcion_guiada)))
 
   def solve(self):
     lista_tabu = []
+    priority_info_cache = None
 
     # Estado inicial
-    tupla_fo = self.modelo.calc_fo_new(self.ssp.alfa, self.ssp.cv_ideal, self.ssp.ventana_ideal)
+    tupla_fo = self.modelo.calc_fo_new(self.ssp.alfa, self.ssp.cv_ideal, self.ssp.ventana_ideal, calcular_prioridades=True)
     X = Nodo(None, self.modelo.X.copy(), self.modelo.Y.copy(), None, tupla_fo[2], tupla_fo)
     X_prime = copy.deepcopy(X)
+    priority_info_cache = tupla_fo[4] if len(tupla_fo) >= 5 else None
 
     iteracion_actual = 0
-    contador_sin_mejora = 0            # <--- Contador para Criterio 1
-    intentos_fallidos_consecutivos = 0 # <--- Seguridad para Criterio 2
+    contador_sin_mejora = 0
+    intentos_fallidos_consecutivos = 0
 
     print(f"--- Inicio Tabu Search (FO Inicial: {X.fo}) ---")
     print("Desbalance:", X.tupla_fo[0])
@@ -1727,8 +1912,12 @@ class UCTP:
     while True:
       print(f"\nIteración TS: {iteracion_actual + 1} | Mejor FO Global: {X_prime.fo} | Sin Mejora: {contador_sin_mejora}")
 
+      modo_vecindario = None
+      if self.busqueda_guiada:
+        modo_vecindario = 'imbalance' if X.tupla_fo[0] > X.tupla_fo[1] else 'window'
+
       # 1. Generación de vecindario
-      vecindario = self._generar_vecindario(X)
+      vecindario = self._generar_vecindario(X, priority_info_cache, modo_vecindario)
 
       X_actual = None
       movimiento_valido = False
@@ -1772,6 +1961,14 @@ class UCTP:
       resultados.append(X.tupla_fo)
       print(f"  -> Nuevo vecino aceptado. FO: {X.fo}")
 
+      # Refrescar prioridades para la nueva solución
+      if self.busqueda_guiada:
+        fo_con_prioridad = self.modelo.calc_fo_new(
+          self.ssp.alfa, self.ssp.cv_ideal, self.ssp.ventana_ideal,
+          calcular_prioridades=True
+        )
+        priority_info_cache = fo_con_prioridad[4] if len(fo_con_prioridad) >= 5 else None
+
       # 5. Actualizar Mejor Solución Global (MEJORA 1: Contador sin mejora)
       if X.fo < X_prime.fo:
         print(f"  * ¡MEJORA ENCONTRADA! {X_prime.fo} -> {X.fo}")
@@ -1805,7 +2002,7 @@ class UCTP:
   # -----------------------------------------------------------------------
   # Métodos Auxiliares (Sin cambios lógicos mayores, solo el que ya tenías)
   # -----------------------------------------------------------------------
-  def _generar_vecindario(self, X_nodo: Nodo):
+  def _generar_vecindario(self, X_nodo: Nodo, priority_info=None, modo=None):
     vecindario = []
 
     # Identificar sesiones asignadas (valor 1)
@@ -1819,9 +2016,18 @@ class UCTP:
       movimiento = None
       operador = rd.choice(['swap', 'move'])
 
+      # Decidir si usar selección guiada para la(s) clase(s) a mover
+      usar_guiado = (priority_info is not None and modo is not None
+                     and rd.random() < self.proporcion_guiada)
+
       # --- OPERADOR MOVE ---
       if operador == 'move':
-        clase_random = rd.choice(asignaciones_activas)
+        if usar_guiado:
+          clase_random = self._seleccionar_clase_segun_prioridad(
+            asignaciones_activas, priority_info, modo
+          )
+        else:
+          clase_random = rd.choice(asignaciones_activas)
         idx_a, idx_p, idx_s, b_actual = clase_random
 
         b_nuevo = rd.randint(0, self.modelo.B - 1)
@@ -1838,13 +2044,24 @@ class UCTP:
         if len(asignaciones_activas) < 2:
             continue
 
-        idx1 = rd.randint(0, len(asignaciones_activas) - 1)
-        idx2 = rd.randint(0, len(asignaciones_activas) - 1)
-        while idx1 == idx2:
-             idx2 = rd.randint(0, len(asignaciones_activas) - 1)
+        if usar_guiado:
+          c1 = self._seleccionar_clase_segun_prioridad(
+            asignaciones_activas, priority_info, modo
+          )
+          # Segunda clase: aleatoria (mantiene diversidad)
+          idx2 = rd.randint(0, len(asignaciones_activas) - 1)
+          c2 = asignaciones_activas[idx2]
+          while c1 == c2:
+            idx2 = rd.randint(0, len(asignaciones_activas) - 1)
+            c2 = asignaciones_activas[idx2]
+        else:
+          idx1 = rd.randint(0, len(asignaciones_activas) - 1)
+          idx2 = rd.randint(0, len(asignaciones_activas) - 1)
+          while idx1 == idx2:
+               idx2 = rd.randint(0, len(asignaciones_activas) - 1)
 
-        c1 = asignaciones_activas[idx1]
-        c2 = asignaciones_activas[idx2]
+          c1 = asignaciones_activas[idx1]
+          c2 = asignaciones_activas[idx2]
 
         if c1[3] == c2[3]:
              continue
@@ -1892,6 +2109,34 @@ class UCTP:
     self.modelo.set_X(X_nodo.X)
     self.modelo.set_Y(X_nodo.Y)
     return vecindario
+
+  def _seleccionar_clase_segun_prioridad(self, asignaciones_activas, priority_info, modo):
+    priority_list = priority_info.get(modo, [])
+    if not priority_list:
+      return rd.choice(asignaciones_activas)
+
+    # Construir peso para cada clase (a,p,s) activa según prioridad de su paralelo
+    pesos = []
+    for clase in asignaciones_activas:
+      idx_a, idx_p, idx_s, _ = clase
+      peso = 1.0
+      for p_idx_a, p_idx_p, p_valor in priority_list:
+        if p_idx_a == idx_a and p_idx_p == idx_p:
+          peso = 1.0 + p_valor
+          break
+      pesos.append(peso)
+
+    total = sum(pesos)
+    if total <= 0:
+      return rd.choice(asignaciones_activas)
+
+    r = rd.random() * total
+    acum = 0.0
+    for i, p in enumerate(pesos):
+      acum += p
+      if r <= acum:
+        return asignaciones_activas[i]
+    return asignaciones_activas[-1]
 
   def _obtener_mejor_vecino(self, vecindario: List):
     vecindario.sort(key=lambda x: x.fo)

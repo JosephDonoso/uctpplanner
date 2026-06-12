@@ -58,12 +58,15 @@ El archivo `config.modelo.json` separa los valores modificables por sección:
   - `tamano_lista_tabu`: largo de la lista Tabu para evitar repetir movimientos recientes.
   - `tamano_vecindario`: cantidad de vecinos generados por iteración.
   - `resolver_ssp`: si `true`, `UCTP` vuelve a resolver `SSP` al evaluar cada vecino; si `false`, solo recalcula la FO con el `Y` actual.
+  - `busqueda_guiada`: si `true`, cada iteración decide entre priorizar desbalance o ventana según cuál esté peor y sesga la selección de clases a mover hacia los paralelos más problemáticos. Si `false`, la generación de vecinos es completamente aleatoria (comportamiento original).
+  - `proporcion_guiada`: fracción de vecinos (0.0–1.0) que usan selección guiada cuando `busqueda_guiada=true`. El resto se genera aleatoriamente para mantener diversidad.
 - `flujo`
   - `max_iteraciones`: cantidad de ciclos Greedy + SSP + UCTP.
 - `salida`
   - `ruta_json`: archivo exportado final. Si se deja `null`, la salida por defecto será `<json_origen>.generado.json`.
   - `ruta_graficos`: archivo donde se guarda la figura de evolución de métricas.
-  - `ruta_resultados`: archivo donde se van acumulando los tuplos de resultados del flujo.
+  - `ruta_resultados`: archivo donde se van acumulando los tuplos de la mejor solución encontrada por ejecución (formato `(desbalance, insatisfaccion, fo, choques, tiempo_ejecucion)`).
+  - `ruta_valores_graficos`: archivo TSV (tab-separated) con los valores de cada iteración usados para generar el gráfico de evolución: `iteracion`, `desbalance`, `insatisfaccion`, `fo`, `choques`.
   - `ruta_warnings`: archivo donde se exportan las advertencias de reintentos de asignación del componente `Greedy`.
   - `guardar_graficos`: activa o desactiva el guardado del gráfico final.
   - `guardar_resultados`: activa o desactiva el guardado en `ruta_resultados`.
@@ -88,3 +91,5 @@ Eso carga el dominio desde `test.json` (si no se especifica otro), usa los pará
 - Si no pasas `--config`, el script usa valores por defecto internos.
 - Si no pasas `--json-path`, se usa `dominio.json_path` del config o `test.json` por defecto.
 - El archivo `config.modelo.json` está pensado como punto de partida para ajustar los parámetros del flujo sin tocar el código.
+- `ruta_resultados` guarda la **mejor** FO global, no la última. Escanea todos los resultados de la ejecución y escribe el tuplo con FO mínima.
+- `ruta_valores_graficos` se sobreescribe en cada ejecución (contiene los datos del último flujo). El gráfico y `ruta_resultados` son acumulativos.

@@ -79,6 +79,8 @@ def main(configuracion: Optional[Dict[str, Any]] = None):
     tamaño_lista_tabu=int(uctp_cfg.get('tamaño_lista_tabu', uctp_cfg.get('tamano_lista_tabu', 20))),
     tamaño_vecindario=int(uctp_cfg.get('tamaño_vecindario', uctp_cfg.get('tamano_vecindario', 50))),
     resolver_ssp=bool(uctp_cfg.get('resolver_ssp', True)),
+    busqueda_guiada=bool(uctp_cfg.get('busqueda_guiada', True)),
+    proporcion_guiada=float(uctp_cfg.get('proporcion_guiada', 0.7)),
   )
 
   print("\n--- INICIO DEL FLUJO PRINCIPAL ---")
@@ -153,12 +155,9 @@ def _postprocesar_y_exportar(
   """Genera gráficos, guarda resultados y exporta el JSON final."""
   if resultados:
     resultados_plt = resultados[:100]
-    mejores = []
-    min_fo = float('inf')
-    for r in resultados_plt:
-      if r[2] < min_fo:
-        min_fo = r[2]
-        mejores.append(r)
+
+    # Mejor resultado global (de todos los resultados, no solo primeros 100)
+    mejor_resultado = min(resultados, key=lambda r: r[2])
 
     iteraciones = range(len(resultados_plt))
     desbalance = [r[0] for r in resultados_plt]
@@ -216,10 +215,17 @@ def _postprocesar_y_exportar(
       plt.tight_layout()
       plt.savefig(ruta_graficos)
 
-    if mejores and bool(salida_cfg.get('guardar_resultados', True)):
-      ruta = str(salida_cfg.get('ruta_resultados', 'results.txt'))
+    # Guardar valores de las tuplas usadas en el gráfico
+    ruta_valores = str(salida_cfg.get('ruta_valores_graficos', 'data/output/valores_graficos_optimizacion.txt'))
+    with open(ruta_valores, 'w', encoding='utf-8') as f:
+      f.write("iteracion\tdesbalance\tinsatisfaccion\tfo\tchoques\n")
+      for i in range(len(resultados_plt)):
+        f.write(f"{i}\t{resultados_plt[i][0]}\t{resultados_plt[i][1]}\t{resultados_plt[i][2]}\t{resultados_plt[i][3]}\n")
+
+    if bool(salida_cfg.get('guardar_resultados', True)):
+      ruta = str(salida_cfg.get('ruta_resultados', 'data/output/results.txt'))
       with open(ruta, 'a', encoding='utf-8') as f:
-        f.write(str((*(mejores[-1]), tiempo_ejecucion)) + "\n")
+        f.write(str((*mejor_resultado, tiempo_ejecucion)) + "\n")
 
   try:
     ruta_json_cfg = salida_cfg.get('ruta_json')
