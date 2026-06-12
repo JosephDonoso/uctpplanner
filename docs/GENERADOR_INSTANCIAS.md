@@ -53,19 +53,24 @@ Ruta de salida por defecto del JSON generado. Si se usa `--output`, ese valor ti
 - `asignaturas`: cantidad de asignaturas distintas a generar.
 - `paralelos_min`, `paralelos_max`: mínimo y máximo de paralelos por asignatura.
 - `media_paralelos_por_asignatura`: media objetivo usada para distribuir paralelos entre asignaturas.
+- `paralelos_std`: desviación estándar de la distribución normal truncada para paralelos. Si se omite, default `(max − min) / 4`.
 - `sesiones_min`, `sesiones_max`: mínimo y máximo de clases por asignatura.
 - `media_sesiones_por_asignatura`: media objetivo de clases por asignatura.
+- `sesiones_std`: desviación estándar para la distribución de sesiones. Default `(max − min) / 4`.
 - `maestros`: cantidad de profesores a generar.
 - `paralelos_min_por_maestro`, `paralelos_max_por_maestro`: rango de carga por maestro.
 - `media_paralelos_por_maestro`: media objetivo de carga por maestro.
+- `paralelos_maestro_std`: desviación estándar para la distribución de carga por maestro. Default `(max − min) / 4`.
 - `prob_disponibilidad_maestro_bloque`: probabilidad de que un maestro esté disponible en un bloque dado.
 - `estudiantes`: cantidad de estudiantes a generar.
 - `asignaturas_min_por_estudiante`, `asignaturas_max_por_estudiante`: mínimo y máximo de asignaturas por estudiante.
 - `media_asignaturas_por_estudiante`: media objetivo de asignaturas por estudiante.
+- `asignaturas_std`: desviación estándar para la distribución de asignaturas por estudiante. Default `(max − min) / 4`.
 - `carreras`: cantidad de carreras a generar.
 - `semestre_min_por_carrera`: mínimo de semestres por carrera.
 - `semestre_max_por_carrera`: máximo de semestres por carrera.
 - `media_semestres_por_carrera`: media objetivo de semestres por carrera.
+- `semestres_std`: desviación estándar para la distribución de semestres por carrera. Default `(max − min) / 4`.
 - `prob_relacion_asignatura_curso`: probabilidad de que una asignatura de estudiante provenga de su curso base.
 - `prob_curso_base_para_estudiante`: probabilidad de que una asignatura salga sin curso asociado.
 - `prob_asignaturas_preasignadas`: probabilidad de intentar preasignar horarios de una asignatura.
@@ -101,6 +106,7 @@ El peso controla la probabilidad relativa de que ese tipo aparezca al construir 
 
 ## Reglas de generación
 
+- Las cantidades con `min`, `max` y `media` (paralelos, sesiones, asignaturas por estudiante, semestres por carrera, carga por maestro) se generan con una **distribución normal truncada** con desviación estándar `*_std`. El total suma exactamente `round(N × media)` mediante el **método del resto mayor** (Hare quota).
 - Las clases se generan por asignatura y se copian a cada paralelo.
 - `prob_asignaturas_preasignadas` aplica por asignatura completa: el generador intenta fijar horarios para todas las clases de esa asignatura; si falla, revierte la preasignación de esa asignatura.
 - La ayudantía, cuando aparece, se marca con `"maestros": null`.
@@ -150,7 +156,12 @@ Si una asignatura sale sin curso, el generador deja `curso` en `null`.
   "cantidades": {
     "asignaturas": 10,
     "maestros": 8,
-    "estudiantes": 100
+    "estudiantes": 100,
+    "paralelos_std": 0.8,
+    "sesiones_std": 0.5,
+    "asignaturas_std": 1.2,
+    "semestres_std": 1.5,
+    "paralelos_maestro_std": 0.7
   },
   "tiempos": {
     "dias": ["Lu", "Ma", "Mi", "Ju", "Vi"],
@@ -179,22 +190,27 @@ Si una asignatura sale sin curso, el generador deja `curso` en `null`.
     "paralelos_min": 1,
     "paralelos_max": 3,
     "media_paralelos_por_asignatura": 1.5,
+    "paralelos_std": 0.7,
     "sesiones_min": 2,
     "sesiones_max": 4,
     "media_sesiones_por_asignatura": 2.8,
+    "sesiones_std": 0.6,
     "maestros": 12,
     "paralelos_min_por_maestro": 1,
     "paralelos_max_por_maestro": 4,
     "media_paralelos_por_maestro": 2.0,
+    "paralelos_maestro_std": 0.8,
     "prob_disponibilidad_maestro_bloque": 0.75,
     "estudiantes": 300,
     "asignaturas_min_por_estudiante": 1,
     "asignaturas_max_por_estudiante": 6,
     "media_asignaturas_por_estudiante": 3.0,
+    "asignaturas_std": 1.0,
     "carreras": 3,
     "semestre_min_por_carrera": 8,
     "semestre_max_por_carrera": 12,
     "media_semestres_por_carrera": 9.5,
+    "semestres_std": 1.2,
     "prob_relacion_asignatura_curso": 0.9,
     "prob_asignatura_sin_curso": 0.1,
     "prob_asignaturas_preasignadas": 0.08,
@@ -229,7 +245,9 @@ Si una asignatura sale sin curso, el generador deja `curso` en `null`.
 }
 ```
 
-## Nota
+## Notas
 
-El generador mantiene compatibilidad con varias claves antiguas, pero la documentación de referencia es la de este archivo y la estructura que hoy produce el script.
+- Las cantidades con rango `[min, max]` y `media` se generan con una **distribución normal truncada** usando `random.gauss`. La desviación estándar se controla con el campo `*_std` correspondiente. La suma total de los valores generados equivale exactamente a `round(N × media)` gracias al método del resto mayor (Hare quota).
+- Si un campo `*_std` se omite, se usa `(max − min) / 4` como default (regla empírica para que ~95 % de los valores quede dentro del rango).
+- El generador mantiene compatibilidad con varias claves antiguas, pero la documentación de referencia es la de este archivo y la estructura que hoy produce el script.
 

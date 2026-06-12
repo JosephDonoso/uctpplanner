@@ -69,35 +69,60 @@ def _codigo_seq(prefijo: str, indice: int, ancho: int = 3) -> str:
     return f"{prefijo}{indice:0{ancho}d}"
 
 
-def _normalizar_total_objetivo(cantidad: int, minimo: int, maximo: int, media: float) -> int:
-    objetivo = int(round(cantidad * media))
-    return max(cantidad * minimo, min(cantidad * maximo, objetivo))
-
-
-def _distribuir_enteros(cantidad: int, minimo: int, maximo: int, media: float, rng: random.Random) -> List[int]:
+def _generar_normal_acotada(
+    cantidad: int, minimo: int, maximo: int,
+    media: float, std: float, rng: random.Random
+) -> List[int]:
     if cantidad <= 0:
         return []
     minimo = max(0, minimo)
     maximo = max(minimo, maximo)
-    objetivo_total = _normalizar_total_objetivo(cantidad, minimo, maximo, media)
-    valores = [minimo] * cantidad
-    sobrante = objetivo_total - cantidad * minimo
+    if minimo == maximo:
+        return [minimo] * cantidad
 
-    indices = list(range(cantidad))
-    while sobrante > 0:
-        rng.shuffle(indices)
-        progreso = False
-        for idx in indices:
-            if sobrante <= 0:
+    target_total = int(round(cantidad * media))
+    target_total = max(cantidad * minimo, min(cantidad * maximo, target_total))
+
+    raw: List[float] = []
+    for _ in range(cantidad):
+        while True:
+            v = rng.gauss(media, std)
+            if minimo - 0.5 <= v <= maximo + 0.5:
                 break
-            if valores[idx] < maximo:
-                valores[idx] += 1
-                sobrante -= 1
-                progreso = True
-        if not progreso:
-            break
+        raw.append(v)
 
-    return valores
+    total_raw = sum(raw)
+    if total_raw == 0:
+        scaled: List[float] = [media] * cantidad
+    else:
+        factor = target_total / total_raw
+        scaled = [v * factor for v in raw]
+
+    bases = [int(v) for v in scaled]
+    restos = [v - int(v) for v in scaled]
+    suma_actual = sum(bases)
+    faltante = target_total - suma_actual
+
+    indices = sorted(range(cantidad), key=lambda i: restos[i], reverse=True)
+    for i in indices[:faltante]:
+        bases[i] += 1
+
+    for i in range(cantidad):
+        bases[i] = max(minimo, min(maximo, bases[i]))
+
+    diff = target_total - sum(bases)
+    if diff > 0:
+        candidatos = [i for i in range(cantidad) if bases[i] < maximo]
+        rng.shuffle(candidatos)
+        for i in candidatos[:diff]:
+            bases[i] += 1
+    elif diff < 0:
+        candidatos = [i for i in range(cantidad) if bases[i] > minimo]
+        rng.shuffle(candidatos)
+        for i in candidatos[:abs(diff)]:
+            bases[i] -= 1
+
+    return bases
 
 
 def _generar_bloques_diarios(cantidad: int) -> List[str]:
@@ -207,10 +232,11 @@ def _construir_catalogo_carreras(
     minimo_semestres: int,
     maximo_semestres: int,
     media_semestres: float,
+    semestres_std: float,
     prefijo_carrera: str,
     rng: random.Random,
 ) -> List[Dict[str, Any]]:
-    semestres_por_carrera = _distribuir_enteros(cantidad_carreras, minimo_semestres, maximo_semestres, media_semestres, rng)
+    semestres_por_carrera = _generar_normal_acotada(cantidad_carreras, minimo_semestres, maximo_semestres, media_semestres, semestres_std, rng)
     catalogo: List[Dict[str, Any]] = []
     for idx, cantidad_semestres in enumerate(semestres_por_carrera, start=1):
         carrera = _codigo_seq(prefijo_carrera, idx)
@@ -513,25 +539,30 @@ def generar_instancia(config: Dict[str, Any], semilla_externa: Optional[int] = N
     min_paralelos = _entero(cantidades_cfg, "paralelos_min", 1)
     max_paralelos = _entero(cantidades_cfg, "paralelos_max", 4)
     media_paralelos = _numero(cantidades_cfg, "media_paralelos_por_asignatura", 1.48)
+    paralelos_std = _numero(cantidades_cfg, "paralelos_std", (max_paralelos - min_paralelos) / 4)
     min_sesiones = _entero(cantidades_cfg, "sesiones_min", 2)
     max_sesiones = _entero(cantidades_cfg, "sesiones_max", 4)
     media_sesiones = _numero(cantidades_cfg, "media_sesiones_por_asignatura", 2.7)
+    sesiones_std = _numero(cantidades_cfg, "sesiones_std", (max_sesiones - min_sesiones) / 4)
 
     n_maestros = _entero(cantidades_cfg, "maestros", 50)
     min_paralelos_maestro = _entero(cantidades_cfg, "paralelos_min_por_maestro", 1)
     max_paralelos_maestro = _entero(cantidades_cfg, "paralelos_max_por_maestro", 4)
     media_paralelos_maestro = _numero(cantidades_cfg, "media_paralelos_por_maestro", 2.3)
+    paralelos_maestro_std = _numero(cantidades_cfg, "paralelos_maestro_std", (max_paralelos_maestro - min_paralelos_maestro) / 4)
     prob_disponibilidad_maestro_bloque = _numero(cantidades_cfg, "prob_disponibilidad_maestro_bloque", 0.7)
 
     n_estudiantes = _entero(cantidades_cfg, "estudiantes", 1200)
     min_sesiones_estudiante = _entero(cantidades_cfg, "asignaturas_min_por_estudiante", _entero(cantidades_cfg, "sesiones_min_por_estudiante", 0))
     max_sesiones_estudiante = _entero(cantidades_cfg, "asignaturas_max_por_estudiante", _entero(cantidades_cfg, "sesiones_max_por_estudiante", 7))
     media_sesiones_estudiante = _numero(cantidades_cfg, "media_asignaturas_por_estudiante", _numero(cantidades_cfg, "media_sesiones_por_estudiante", 3.2))
+    asignaturas_std = _numero(cantidades_cfg, "asignaturas_std", (max_sesiones_estudiante - min_sesiones_estudiante) / 4)
 
     n_carreras = _entero(cantidades_cfg, "carreras", _entero(cantidades_cfg, "cursos", 15))
     min_semestres_carrera = _entero(cantidades_cfg, "semestre_min_por_carrera", 8)
     max_semestres_carrera = _entero(cantidades_cfg, "semestre_max_por_carrera", 12)
     media_semestres_carrera = _numero(cantidades_cfg, "media_semestres_por_carrera", 9.5)
+    semestres_std = _numero(cantidades_cfg, "semestres_std", (max_semestres_carrera - min_semestres_carrera) / 4)
     prob_relacion_asignatura_curso = _numero(cantidades_cfg, "prob_curso_base_para_estudiante", 0.88)
     prob_asignatura_sin_curso = _numero(cantidades_cfg, "prob_asignatura_sin_curso", 0.1)
     prob_asignaturas_preasignadas = _numero(cantidades_cfg, "prob_asignaturas_preasignadas", 0.05)
@@ -553,6 +584,7 @@ def generar_instancia(config: Dict[str, Any], semilla_externa: Optional[int] = N
         min_semestres_carrera,
         max_semestres_carrera,
         media_semestres_carrera,
+        semestres_std,
         prefijo_carrera,
         rng,
     )
@@ -565,11 +597,12 @@ def generar_instancia(config: Dict[str, Any], semilla_externa: Optional[int] = N
         cursos_por_asignatura = _repartir_asignaturas_en_cursos(len(asignaturas_con_curso), len(cursos_catalogo), rng)
         for idx_asignatura, idx_curso in zip(asignaturas_con_curso, cursos_por_asignatura):
             curso_por_asignatura[idx_asignatura] = idx_curso
-    paralelos_por_asignatura = _distribuir_enteros(n_asignaturas, min_paralelos, max_paralelos, media_paralelos, rng)
-    sesiones_por_asignatura = _distribuir_enteros(n_asignaturas, min_sesiones, max_sesiones, media_sesiones, rng)
+    paralelos_por_asignatura = _generar_normal_acotada(n_asignaturas, min_paralelos, max_paralelos, media_paralelos, paralelos_std, rng)
+    sesiones_por_asignatura = _generar_normal_acotada(n_asignaturas, min_sesiones, max_sesiones, media_sesiones, sesiones_std, rng)
 
     total_paralelos = sum(paralelos_por_asignatura)
-    objetivo_asignaciones_maestro = _normalizar_total_objetivo(n_maestros, min_paralelos_maestro, max_paralelos_maestro, media_paralelos_maestro)
+    objetivo_asignaciones_maestro = int(round(n_maestros * media_paralelos_maestro))
+    objetivo_asignaciones_maestro = max(n_maestros * min_paralelos_maestro, min(n_maestros * max_paralelos_maestro, objetivo_asignaciones_maestro))
     objetivo_asignaciones_maestro = max(objetivo_asignaciones_maestro, total_paralelos)
 
     maestros: List[Dict[str, Any]] = []
@@ -736,7 +769,7 @@ def generar_instancia(config: Dict[str, Any], semilla_externa: Optional[int] = N
                         clase.pop("horario_predefinido", None)
 
     # Estudiantes.
-    sesiones_por_estudiante = _distribuir_enteros(n_estudiantes, min_sesiones_estudiante, max_sesiones_estudiante, media_sesiones_estudiante, rng)
+    sesiones_por_estudiante = _generar_normal_acotada(n_estudiantes, min_sesiones_estudiante, max_sesiones_estudiante, media_sesiones_estudiante, asignaturas_std, rng)
     curso_a_asignaturas: Dict[int, List[int]] = {idx: [] for idx in range(len(cursos_catalogo))}
     for idx_a, curso_idx in curso_por_asignatura.items():
         curso_a_asignaturas[curso_idx].append(idx_a)
