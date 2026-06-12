@@ -1907,8 +1907,8 @@ class UCTP:
     print("Desbalance:", X.tupla_fo[0])
     print("Insatisfacción:", X.tupla_fo[1])
 
-    resultados.append(X.tupla_fo)
-    mejores_resultados.append(X.tupla_fo)
+    resultados.append(X.tupla_fo[:4])
+    mejores_resultados.append(X.tupla_fo[:4])
     while True:
       print(f"\nIteración TS: {iteracion_actual + 1} | Mejor FO Global: {X_prime.fo} | Sin Mejora: {contador_sin_mejora}")
 
@@ -1958,7 +1958,7 @@ class UCTP:
       # 4. Actualizar Tabú y solución actual
       self._actualizar_lista_tabu(X_actual)
       X = X_actual
-      resultados.append(X.tupla_fo)
+      resultados.append(X.tupla_fo[:4])
       print(f"  -> Nuevo vecino aceptado. FO: {X.fo}")
 
       # Refrescar prioridades para la nueva solución
@@ -1972,7 +1972,7 @@ class UCTP:
       # 5. Actualizar Mejor Solución Global (MEJORA 1: Contador sin mejora)
       if X.fo < X_prime.fo:
         print(f"  * ¡MEJORA ENCONTRADA! {X_prime.fo} -> {X.fo}")
-        mejores_resultados.append(X.tupla_fo)
+        mejores_resultados.append(X.tupla_fo[:4])
         X_prime = copy.deepcopy(X)
         contador_sin_mejora = 0 # Reseteamos contador porque hubo mejora
       else:
