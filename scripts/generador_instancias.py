@@ -484,8 +484,8 @@ def _preasignar_paralelo(
     return True
 
 
-def generar_instancia(config: Dict[str, Any]) -> Dict[str, Any]:
-    semilla = _obtener(config, "seed", None)
+def generar_instancia(config: Dict[str, Any], semilla_externa: Optional[int] = None) -> Dict[str, Any]:
+    semilla = semilla_externa if semilla_externa is not None else _obtener(config, "seed", None)
     rng = random.Random(semilla)
 
     metadatos = _obtener_dict(config, "metadatos")
@@ -821,6 +821,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Genera una instancia UCTP desde un config JSON.")
     parser.add_argument("--config", required=True, help="Ruta al config JSON.")
     parser.add_argument("--output", default=None, help="Ruta de salida del JSON generado.")
+    parser.add_argument("--seed", type=int, default=None, help="Semilla para reproducible. Prioritaria sobre la del config.")
     args = parser.parse_args()
 
     config_path = Path(args.config).expanduser().resolve()
@@ -828,7 +829,7 @@ def main() -> int:
         raise SystemExit(f"No existe el config: {config_path}")
 
     config = _leer_json(config_path)
-    instancia = generar_instancia(config)
+    instancia = generar_instancia(config, semilla_externa=args.seed)
     salida_path = _resolver_salida(config_path, config, args.output)
     salida_path.parent.mkdir(parents=True, exist_ok=True)
     salida_path.write_text(json.dumps(instancia, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
