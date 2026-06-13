@@ -13,6 +13,7 @@ from src.uctp_utils import configuracion_por_defecto, mezclar_configuraciones
 from UCTPPlanner import main as solver_main
 INSTANCIA_TEMP = RAIZ / "data" / "input" / "_batch_temp.json"
 CONFIG_GENERADOR = RAIZ / "config" / "config.generador.json"
+CONFIG_SOLVER = RAIZ / "config" / "config.modelo.json"
 RESULTADOS = RAIZ / "data" / "output" / "results.txt"
 
 
@@ -25,7 +26,7 @@ def main():
     semilla_inicial = int(sys.argv[2]) if len(sys.argv) >= 3 else 999999
 
     config_gen = _leer_json(CONFIG_GENERADOR)
-    config_solver_base = configuracion_por_defecto()
+    config_solver_base = mezclar_configuraciones(configuracion_por_defecto(), _leer_json(CONFIG_SOLVER))
 
     random.seed(semilla_inicial)
     seeds = [random.randint(1, 999999) for _ in range(num_iteraciones)]
